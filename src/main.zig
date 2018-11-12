@@ -1,5 +1,12 @@
 const std = @import("std");
 
+const space: i32 = 0x20;
+const tab: i32 = 0x09;
+const new_line: i32 = 0x0A;
+const carriage_return: i32 = 0x0D;
+const line_tabulation: i32 = 0x0B;
+const form_feed: i32 = 0x0C;
+
 pub const Markdown = struct.{
     ///Token stores details about the markdown token.
     pub const Token = struct.{
@@ -26,8 +33,15 @@ pub const Markdown = struct.{
 
     pub const Id = enum.{
         EOF,
+        Illegal, // refrered as insecure characters
         HashTag, // #
-        Escape, // #
+        Space,
+        Tab,
+        NewLine,
+        CarriageReturn,
+        LineTabulation,
+        FormFeed,
+        Ident,
     };
 
     // lex braks down src into smaller tokens. This interprets src as unicode
