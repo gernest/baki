@@ -15,6 +15,7 @@ pub const Markdown = struct.{
         id: Id,
         begin: usize,
         end: usize,
+        line: usize,
     };
 
     pub const Item = struct.{
