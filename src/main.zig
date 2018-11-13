@@ -9,23 +9,23 @@ const carriage_return: i32 = 0x0D;
 const line_tabulation: i32 = 0x0B;
 const form_feed: i32 = 0x0C;
 
-pub const Markdown = struct.{
+pub const Markdown = struct {
     ///Token stores details about the markdown token.
-    pub const Token = struct.{
+    pub const Token = struct {
         id: Id,
         begin: usize,
         end: usize,
         line: usize,
     };
 
-    pub const Item = struct.{
+    pub const Item = struct {
         token: Token,
         kind: ItemKind,
     };
 
     /// ItemKind defines possible kinds of structures that can be represented by
     /// a markdown document.
-    pub const ItemKind = enum.{
+    pub const ItemKind = enum {
         Block,
         Inline,
     };
@@ -37,7 +37,7 @@ pub const Markdown = struct.{
 
     pub const ToeknList = std.ArrayList(Token);
 
-    pub const Id = enum.{
+    pub const Id = enum {
         EOF,
         Illegal, // refrered as insecure characters
         Space,
