@@ -1,107 +1,53 @@
 const std = @import("std");
 const mem = std.mem;
+const Buffer = std.Buffer;
 const unicode = @import("zunicode");
 const utf8 = unicode.utf8;
 
-const space: i32 = 0x20;
-const tab: i32 = 0x09;
-const new_line: i32 = 0x0A;
-const carriage_return: i32 = 0x0D;
-const line_tabulation: i32 = 0x0B;
-const form_feed: i32 = 0x0C;
-
+/// Markdown provides facilities for parsing and rendering mardkwon documents.
+/// This code was ported from go's blackfriday  available at http://github.com/russross/blackfriday
 pub const Markdown = struct {
-    /// The markdown source in bytes that has to be rendered to markdown.
-    src: []const u8,
-    const Position = struct {
-        start: usize,
-        end: usize,
+    /// markdown extensions supported by the parser.
+    const Extension = enum(usize) {
+        NoIntraEmphasis = 1,
+        Tables = 2,
+        FencedCode = 4,
+        Autolink = 8,
+        Strikethrough = 16,
+        LaxHtmlBlocks = 32,
+        SpaceHeaders = 64,
+        HardLineBreak = 128,
+        TabSizeEight = 256,
+        Footnotes = 512,
+        NoEmptyLineBeforeBlock = 1024,
+        HeaderIds = 2048,
+        Titleblock = 4096,
+        AutoHeaderIds = 8192,
+        BackslashLineBreak = 16384,
+        DefinitionLists = 32768,
+        JoinLines = 65536,
     };
 
-    /// Mode is an enum describing in which state an error happened.
-    const Mode = enum {
-        Lex,
-        Parse,
+    const Context = struct {
+        out: *Buffer,
+        text: ?[]const u8,
+        flags: ?usize,
+        header: ?[]const u8,
+        body: ?[]const u8,
+        column_data: ?[]const u8,
+        name: ?[]const u8,
+        link: ?[]const u8,
+        title: ?[]const u8,
+        content: ?[]const u8,
+        tag: ?[]const u8,
+        ref: ?[]const u8,
+        id: ?[]const u8,
+        entity: ?[]const u8,
+        pub fn hasText(self: *Context) bool {}
     };
 
-    // Error human friendly message about the error which happened during lexing
-    // or parsing.
-    const Error = struct {
-        message: []const u8,
-        position: Position,
-        mode: Mode,
+    const Renderer = struct {
+        blockCode: fn (r: *Renderer, ctx: *Context) void,
+        block: fn (r: *Renderer, ctx: *Context) void,
     };
-
-    ///Token stores details about the markdown token.
-    pub const Token = struct {
-        id: Id,
-        begin: usize,
-        end: usize,
-        line: usize,
-    };
-
-    pub const Item = struct {
-        token: Token,
-        kind: ItemKind,
-    };
-
-    /// ItemKind defines possible kinds of structures that can be represented by
-    /// a markdown document.
-    pub const ItemKind = enum {
-        Block,
-        Inline,
-    };
-
-    /// is a list of collected tokens. This is null if parse hasn't been called
-    /// yet.
-    tokens: ?ToeknList,
-    allocator: *mem.Allocator,
-
-    pub const ToeknList = std.ArrayList(Token);
-
-    pub const Id = enum {
-        EOF,
-        Illegal, // refrered as insecure characters
-        Space,
-        Tab,
-        NewLine,
-        CarriageReturn,
-        LineTabulation,
-        FormFeed,
-        Character,
-    };
-
-    pub fn init(a: *mem.Allocator, src: []const u8) Markdown {
-        return Markdown{ .src = src, .allocator = a, .tokens = null };
-    }
-
-    // lex braks down src into smaller tokens. This interprets src as unicode
-    // code points.
-    fn lex(self: *Markdown, src: []const u8) !void {
-        var iterator = utf8.Iterator.init(src);
-        if (self.tokens != null) {
-            // just clear the prefious tokens
-            self.tokens.?.resize(0);
-        } else {
-            self.tokens = ToeknList.init(self.allocator);
-        }
-
-        var last_pos: usize = 0;
-        while (try iterator.next()) |rune| {
-            var token: Token = undefined;
-            token.begin = last_pos;
-            token.end = last_pos + rune.size;
-            switch (rune.value) {
-                0x00 => token.id = Id.Illegal,
-                space => token.id = Id.Space,
-                tab => token.id = Id.Tab,
-                new_line => token.id = Id.NewLine,
-                carriage_return => token.id = Id.CarriageReturn,
-                line_tabulation => token.id = Id.LineTabulation,
-                form_feed => token.id = Id.FormFeed,
-                else => token.Id = Id.Character,
-            }
-            self.tokens.?.append(token);
-        }
-    }
 };
