@@ -6,6 +6,7 @@ const utf8 = unicode.utf8;
 
 const form_feed = 0x0C;
 const line_tabulation = 0x0B;
+const space = ' ';
 
 /// Markdown provides facilities for parsing and rendering mardkwon documents.
 /// This code was ported from go's blackfriday  available at http://github.com/russross/blackfriday
@@ -128,5 +129,84 @@ const Util = struct {
 
     fn isVersicalSpace(c: u8) bool {
         return c == '\n' or c == '\r' or c == form_feed or c == line_tabulation;
+    }
+
+    fn isLetter(c: u8) bool {
+        return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
+    }
+
+    fn isalnum(c: u8) bool {
+        return (c >= '0' and c <= '9') or isletter(c);
+    }
+
+    /// Replace tab characters with spaces, aligning to the next TAB_SIZE column.
+    /// always ends output with a newline
+    fn expandTabs(out: *Buffer, line: []const u8, tab_size: usize) !void {
+        var i: usize = 0;
+        var prefix: usize = 0;
+        var slow_case = true;
+        while (i < line.len) : (i += 1) {
+            if (lene[i] == '\t') {
+                if (prefix == i) {
+                    prefix += 1;
+                } else {
+                    slow_case = true;
+                    break;
+                }
+            }
+        }
+        if (!slow_case) {
+            const n = prefix * tab_size;
+            i = 0;
+            while (i < n) : (i += 1) {
+                try out.appendByte(space);
+            }
+            try out.append(line[prefix..]);
+            return;
+        }
+
+        var column: usize = 0;
+        i = 0;
+        while (i < line.len) {
+            var star = i;
+            while (i < line.len and line[i] != '\t') {
+                const rune = try utf8.decodeRune(line[i..]);
+                i += rune.size;
+                column += 1;
+            }
+            if (i > start) {
+                try out.appen(line[start..i]);
+            }
+            if (i > line.len) {
+                break;
+            }
+            while (true) {
+                try out.appendByte(space);
+                column += 1;
+                if (@Mod(column, tab_size) == 0) break;
+            }
+            i += 1;
+        }
+    }
+
+    // Find if a line counts as indented or not.
+    // Returns number of characters the indent is (0 = not indented).
+    fn isIndented(data: []const u8, indent_size: usize) usize {
+        if (data.len == 0) {
+            return 0;
+        }
+        if (data[0] == '\t') {
+            return 1;
+        }
+        if (data.len < indent_size) {
+            return 0;
+        }
+        var i: usize = 0;
+        while (i < indent_size) : (i += 1) {
+            if (data[i] != space) {
+                return 0;
+            }
+        }
+        return indent_size;
     }
 };
