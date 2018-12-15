@@ -78,6 +78,11 @@ pub const Markdown = struct {
 
     const Parser = struct {
         r: *Renderer,
+        inline_callbacks: [256]*InlineParser,
+        flags: usize,
+        nesting: usize,
+        max_nesting: usize,
+        inside_link: bool,
     };
 
     // inline parsers
