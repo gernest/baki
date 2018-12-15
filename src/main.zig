@@ -1,6 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
-const utf8 = @import("./zunicode/src/utf8/index.zig");
+const unicode = @import("zunicode");
+const utf8 = unicode.utf8;
 
 const space: i32 = 0x20;
 const tab: i32 = 0x09;
@@ -10,6 +11,27 @@ const line_tabulation: i32 = 0x0B;
 const form_feed: i32 = 0x0C;
 
 pub const Markdown = struct {
+    /// The markdown source in bytes that has to be rendered to markdown.
+    src: []const u8,
+    const Position = struct {
+        start: usize,
+        end: usize,
+    };
+
+    /// Mode is an enum describing in which state an error happened.
+    const Mode = enum {
+        Lex,
+        Parse,
+    };
+
+    // Error human friendly message about the error which happened during lexing
+    // or parsing.
+    const Error = struct {
+        message: []const u8,
+        position: Position,
+        mode: Mode,
+    };
+
     ///Token stores details about the markdown token.
     pub const Token = struct {
         id: Id,
@@ -46,8 +68,12 @@ pub const Markdown = struct {
         CarriageReturn,
         LineTabulation,
         FormFeed,
-        Ident,
+        Character,
     };
+
+    pub fn init(a: *mem.Allocator, src: []const u8) Markdown {
+        return Markdown{ .src = src, .allocator = a, .tokens = null };
+    }
 
     // lex braks down src into smaller tokens. This interprets src as unicode
     // code points.
@@ -61,15 +87,9 @@ pub const Markdown = struct {
         }
 
         var last_pos: usize = 0;
-        while (true) {
+        while (try iterator.next()) |rune| {
             var token: Token = undefined;
             token.begin = last_pos;
-            const rune = try iterator.next();
-            if (rune == null) {
-                token.id = Id.EOF;
-                self.tokens.?.append(token);
-                break;
-            }
             token.end = last_pos + rune.size;
             switch (rune.value) {
                 0x00 => token.id = Id.Illegal,
@@ -79,7 +99,7 @@ pub const Markdown = struct {
                 carriage_return => token.id = Id.CarriageReturn,
                 line_tabulation => token.id = Id.LineTabulation,
                 form_feed => token.id = Id.FormFeed,
-                else => unreachable,
+                else => token.Id = Id.Character,
             }
             self.tokens.?.append(token);
         }
