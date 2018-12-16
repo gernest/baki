@@ -377,7 +377,30 @@ const HTML = struct {
     current_level: usize,
     toc: Buffer,
     header_ids: UsizeMap,
+    params: Params,
     renderer: Markdown.Renderer,
+
+    // Params options for configuring HTML renderer.
+    const Params = struct {
+        /// prepend this to each relative url.
+        abs_prefix: ?[]const u8,
+
+        ///This will be added to  each footnote text.
+        footnote_anchor_prefix: ?[]const u8,
+
+        /// Show this text inside the <a> tag for a footnote return link, if the
+        /// HTML_FOOTNOTE_RETURN_LINKS flag is enabled. If blank, the string
+        /// <sup>[return]</sup> is used.
+        footnote_return_link_contents: ?[]const u8,
+
+        /// If set, add this text to the front of each Header ID, to ensure
+        /// uniqueness.
+        header_id_prefix: ?[]const u8,
+
+        /// If set, add this text to the back of each Header ID, to ensure
+        /// uniqueness.
+        header_id_suffix: ?[]const u8,
+    };
 
     const Renderer = Markdown.Renderer;
     const TextIter = Markdown.TextIter;
@@ -395,6 +418,13 @@ const HTML = struct {
             .current_level = 0,
             .toc = try Buffer.init(a, ""),
             .header_ids = UsizeMap.init(a),
+            .params = Params{
+                .abs_prefix = null,
+                .footnote_anchor_prefix = null,
+                .footnote_return_link_contents = null,
+                .header_id_prefix = null,
+                .header_id_suffix = null,
+            },
             .renderer = Renderer{
                 .blockCode = blockCode,
                 .blockQuote = blockQuote,
