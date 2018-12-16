@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const warn = std.debug.warn;
 const Buffer = std.Buffer;
 const unicode = @import("zunicode");
 const utf8 = unicode.utf8;
@@ -43,27 +44,52 @@ pub const Markdown = struct {
         Extension.BackslashLineBreak |
         Extension.DefinitionLists;
 
-    const Context = struct {
-        out: *Buffer,
-        text: ?[]const u8,
-        flags: ?usize,
-        header: ?[]const u8,
-        body: ?[]const u8,
-        column_data: ?[]const u8,
-        name: ?[]const u8,
-        link: ?[]const u8,
-        title: ?[]const u8,
-        content: ?[]const u8,
-        tag: ?[]const u8,
-        ref: ?[]const u8,
-        id: ?[]const u8,
-        entity: ?[]const u8,
-        pub fn hasText(self: *Context) bool {}
+    const LinkType = enum {
+        NotAutoLink,
+        Normal,
+        Email,
     };
 
     const Renderer = struct {
-        blockCode: fn (r: *Renderer, ctx: *Context) void,
-        block: fn (r: *Renderer, ctx: *Context) void,
+        blockCode: fn (r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) !void,
+        blockQuote: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        blockHtml: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        header: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) !void,
+        hrule: fn (r: *Renderer, out: *Buffer) !void,
+        list: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) !void,
+        listItem: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
+        paragraph: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) !void,
+        table: fn (r: *Renderer, out: *Buffer, header: []const u8, body: []const u8, column_data: []usize) !void,
+        tableRow: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
+        tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
+        footNotes: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) !void,
+        footNoteItem: fn (r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) !void,
+        titleBlock: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+
+        //span level
+        autoLink: fn (r: *Renderer, out: *Buffer, link: []const u8, kind: LinkType) !void,
+        codeSpan: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        doubleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        emphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        image: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, alt: []const u8) !void,
+        lineBreak: fn (r: *Renderer, out: *Buffer) !void,
+        link: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, content: []const u8) !void,
+        rawHtmlTag: fn (r: *Renderer, out: *Buffer, tag: []const u8) !void,
+        tripleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) !void,
+
+        entity: fn (r: *Renderer, out: *Buffer, entity: []const u8) !void,
+        normalText: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+
+        documentHeader: fn (r: *Renderer, out: *Buffer) !void,
+        documentFooter: fn (r: *Renderer, out: *Buffer) !void,
+
+        flags: usize,
+    };
+
+    const TextIter = struct {
+        next: fn (*TextIter) !void,
     };
 
     const Reference = struct {
@@ -78,7 +104,7 @@ pub const Markdown = struct {
 
     const Parser = struct {
         r: *Renderer,
-        inline_callbacks: [256]*InlineParser,
+        inline_callbacks: [256]?*InlineParser,
         flags: usize,
         nesting: usize,
         max_nesting: usize,
@@ -215,3 +241,11 @@ const Util = struct {
         return indent_size;
     }
 };
+
+test "placeholders" {
+    const x = struct {
+        y: [2]?usize,
+    };
+    var v: x = undefined;
+    warn("{}\n", v.y[0] == null);
+}
