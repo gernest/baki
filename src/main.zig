@@ -102,19 +102,45 @@ pub const Markdown = struct {
         overide_fn: fn (*RefOverid, ref: []const u8) *Reference,
     };
 
+    // inline parsers
+    emphasis: InlineParser,
+    const InlineParser = struct {
+        parse: fn (self: *InlineParse, p: *Parser, out: *Buffer, data: []const u8, offset: usize) !usize,
+    };
+
     const Parser = struct {
-        r: *Renderer,
+        render: *Renderer,
         inline_callbacks: [256]?*InlineParser,
         flags: usize,
         nesting: usize,
         max_nesting: usize,
         inside_link: bool,
-    };
 
-    // inline parsers
-    emphasis: InlineParser,
-    const InlineParser = struct {
-        parse_fn: fn (self: *InlineParse, p: *Parser, out: *Buffer, data: []const u8, offset: usize) void,
+        fn inlineBlock(self: *Parser, out: *Buffer, data: []const u8) !void {
+            if (self.nexting >= self.max_nesting) {
+                return;
+            }
+            self.nesting += 1;
+            var i: usize = 0;
+            var end: usize = 0;
+            while (i < data.len) {
+                while (end < data.len and self.inline_callbacks[@intCast(data[end])] == null) : (end += 1) {}
+                try self.render.normalText(out, data[i..end]);
+                if (end >= data.len) {
+                    break;
+                }
+                i = end;
+                const handler = self.inline_callbacks[@intCast(usize, data[end])].?;
+                const consumed = handler.parse(self, out, data, i);
+                if (consumed == 0) {
+                    end = i + 1;
+                } else {
+                    i += consumed;
+                    end = i;
+                }
+            }
+            self.nesting -= 1;
+        }
     };
 
     fn emphasisFn(
