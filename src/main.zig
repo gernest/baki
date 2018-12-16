@@ -344,7 +344,7 @@ const Util = struct {
             i = 1;
         }
         while (i < data.len) {
-            const length = Util.findEmphChar(ctx[i..], c);
+            const length = findEmphChar(ctx[i..], c);
             if (length == 0) {
                 return 0;
             }
