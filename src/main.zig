@@ -105,6 +105,7 @@ pub const Markdown = struct {
     const InlineParser = struct {
         parse: fn (self: *InlineParse, p: *Parser, out: *Buffer, data: []const u8, offset: usize) !usize,
     };
+
     // inline parsers
     emphasis: InlineParser,
 
@@ -154,13 +155,17 @@ pub const Markdown = struct {
         self.parseEmphasis(p, out, data, offset);
     }
 
-    fn parseEmphasis(
-        self: *Markdown,
-        p: *Parser,
-        out: *Buffer,
-        data: []const u8,
-        offset: usize,
-    ) void {}
+    fn parseEmphasis(self: *Markdown, p: *Parser, out: *Buffer, data: []const u8, offset: usize) usize {
+        var ctx = data[offset..];
+        const c = ctx[0];
+        if (ctx.len > 2 and ctx[1] != c) {
+            // whitespace cannot follow an opening emphasis;
+            // strikethrough only takes two characters '~~'
+            if (c == '~' and Util.isSpace(ctx[1])) {
+                return 0;
+            }
+        }
+    }
 
     const Options = struct {
         extensions: usize,
@@ -265,5 +270,79 @@ const Util = struct {
             }
         }
         return indent_size;
+    }
+
+    fn findEmphChar(data: []const u8, c: u8) usize {
+        var i: usize = 0;
+        while (i < data.len) {
+            while (i < data.len and data[i] != c and data[i] != '`' and data[i] != '[') : (i += 1) {}
+            if (i >= data.len) {
+                return 0;
+            }
+            // do not count escaped chars
+            if (i != 0 and data[i - 1] == '\\') {
+                i += 1;
+                continue;
+            }
+            if (data[i] == c) {
+                return i;
+            }
+            if (data[i] == '`') {
+                // skip a code span
+                var tmp: usize = 0;
+                i += 1;
+                while (i < data.len and data[i] != '`') {
+                    if (tmp == 0 and data[i] == c) {
+                        tmp = i;
+                    }
+                    i += 1;
+                }
+                if (i >= data.len) {
+                    return tmp;
+                }
+                i += 1;
+            } else if (data[i] == '[') {
+                // skip a link
+                var tmp: usize = 0;
+                i += 1;
+                while (i < data.len and data[i] != ']') {
+                    if (tmp == 0 and data[i] == c) {
+                        tmp = i;
+                    }
+                    i += 1;
+                }
+                i += 1;
+                while (i < data.len and (data[i] == ' ' or data[i] == '\n')) {
+                    i += 1;
+                }
+                if (i >= data.len) {
+                    return tmp;
+                }
+                if (data[i] != '[' and data[i] != '(') { // not a link
+                    if (tmp > 0) {
+                        return tmp;
+                    }
+                    continue;
+                }
+                const cc = data[i];
+                i += 1;
+                while (i < data.len and data[i] != cc) {
+                    if (tmp == 0 and data[i] == c) {
+                        return i;
+                    }
+                    i += 1;
+                }
+            }
+        }
+        return 0;
+    }
+
+    fn emphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) usize {
+        var i: usize = 0;
+        // skip one symbol if coming from emph3
+        if (data.len > 1 and data[0] == c and data[1] == c) {
+            i = 1;
+        }
+        while (i < data.len) {}
     }
 };
