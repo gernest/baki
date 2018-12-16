@@ -267,11 +267,3 @@ const Util = struct {
         return indent_size;
     }
 };
-
-test "placeholders" {
-    const x = struct {
-        y: [2]?usize,
-    };
-    var v: x = undefined;
-    warn("{}\n", v.y[0] == null);
-}
