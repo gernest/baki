@@ -102,11 +102,11 @@ pub const Markdown = struct {
         overide_fn: fn (*RefOverid, ref: []const u8) *Reference,
     };
 
-    // inline parsers
-    emphasis: InlineParser,
     const InlineParser = struct {
         parse: fn (self: *InlineParse, p: *Parser, out: *Buffer, data: []const u8, offset: usize) !usize,
     };
+    // inline parsers
+    emphasis: InlineParser,
 
     const Parser = struct {
         render: *Renderer,
