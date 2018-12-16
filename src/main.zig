@@ -343,6 +343,22 @@ const Util = struct {
         if (data.len > 1 and data[0] == c and data[1] == c) {
             i = 1;
         }
-        while (i < data.len) {}
+        while (i < data.len) {
+            const length = Util.findEmphChar(ctx[i..], c);
+            if (length == 0) {
+                return 0;
+            }
+            i += length;
+            if (i >= data.len) {
+                return 0;
+            }
+            if (i + 1 < data.len and data[i + 1] == c) {
+                i += 1;
+                continue;
+            }
+            if (data[i] == c and !Util.isSpace(data[i - 1])) {
+                if ((p.flags & Extension.NoIntraEmphasis) != 0) {}
+            }
+        }
     }
 };
