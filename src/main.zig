@@ -9,6 +9,9 @@ const form_feed = 0x0C;
 const line_tabulation = 0x0B;
 const space = ' ';
 
+// UsizeMap is a map of string keys to usize values.
+pub const UsizeMap = std.AutoHashMap([]const u8, usize);
+
 /// Markdown provides facilities for parsing and rendering mardkwon documents.
 /// This code was ported from go's blackfriday  available at http://github.com/russross/blackfriday
 pub const Markdown = struct {
@@ -51,45 +54,45 @@ pub const Markdown = struct {
     };
 
     const Renderer = struct {
-        blockCode: fn (r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) !void,
-        blockQuote: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        blockHtml: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        header: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) !void,
-        hrule: fn (r: *Renderer, out: *Buffer) !void,
-        list: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) !void,
-        listItem: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
-        paragraph: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) !void,
-        table: fn (r: *Renderer, out: *Buffer, header: []const u8, body: []const u8, column_data: []usize) !void,
-        tableRow: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
-        tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) !void,
-        footNotes: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) !void,
-        footNoteItem: fn (r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) !void,
-        titleBlock: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        blockCode: fn (r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void,
+        blockQuote: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        blockHtml: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        header: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void,
+        hrule: fn (r: *Renderer, out: *Buffer) anyerror!void,
+        list: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void,
+        listItem: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
+        paragraph: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void,
+        table: fn (r: *Renderer, out: *Buffer, header: []const u8, body: []const u8, column_data: []usize) anyerror!void,
+        tableRow: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
+        tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
+        footNotes: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void,
+        footNoteItem: fn (r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void,
+        titleBlock: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
 
         //span level
-        autoLink: fn (r: *Renderer, out: *Buffer, link: []const u8, kind: LinkType) !void,
-        codeSpan: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        doubleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        emphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        image: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, alt: []const u8) !void,
-        lineBreak: fn (r: *Renderer, out: *Buffer) !void,
-        link: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, content: []const u8) !void,
-        rawHtmlTag: fn (r: *Renderer, out: *Buffer, tag: []const u8) !void,
-        tripleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
-        footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) !void,
+        autoLink: fn (r: *Renderer, out: *Buffer, link: []const u8, kind: LinkType) anyerror!void,
+        codeSpan: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        doubleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        emphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        image: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, alt: []const u8) anyerror!void,
+        lineBreak: fn (r: *Renderer, out: *Buffer) anyerror!void,
+        link: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, content: []const u8) anyerror!void,
+        rawHtmlTag: fn (r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void,
+        tripleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void,
 
-        entity: fn (r: *Renderer, out: *Buffer, entity: []const u8) !void,
-        normalText: fn (r: *Renderer, out: *Buffer, text: []const u8) !void,
+        entity: fn (r: *Renderer, out: *Buffer, entity: []const u8) anyerror!void,
+        normalText: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
 
-        documentHeader: fn (r: *Renderer, out: *Buffer) !void,
-        documentFooter: fn (r: *Renderer, out: *Buffer) !void,
+        documentHeader: fn (r: *Renderer, out: *Buffer) anyerror!void,
+        documentFooter: fn (r: *Renderer, out: *Buffer) anyerror!void,
 
         flags: usize,
     };
 
     const TextIter = struct {
-        next: fn (*TextIter) !void,
+        next: fn (*TextIter) anyerror!void,
     };
 
     const Reference = struct {
@@ -103,7 +106,7 @@ pub const Markdown = struct {
     };
 
     const InlineParser = struct {
-        parse: fn (self: *InlineParse, p: *Parser, out: *Buffer, data: []const u8, offset: usize) !usize,
+        parse: fn (self: *InlineParser, p: *Parser, out: *Buffer, data: []const u8, offset: usize) anyerror!usize,
     };
 
     // inline parsers
@@ -362,3 +365,102 @@ const Util = struct {
         }
     }
 };
+
+// HTML implements the Markdown.Renderer interafce for html documents.
+const HTML = struct {
+    flags: usize,
+    close_tag: []const u8,
+    title: ?[]const u8,
+    css: ?[]const u8,
+    toc_marker: usize,
+    header_count: usize,
+    current_level: usize,
+    toc: Buffer,
+    header_ids: UsizeMap,
+    renderer: Markdown.Renderer,
+
+    const Renderer = Markdown.Renderer;
+    const TextIter = Markdown.TextIter;
+    const LinkType = Markdown.LinkType;
+    pub const html_close = ">";
+
+    pub fn init(a: *mem.Allocator, flags: usize) !HTML {
+        return HTML{
+            .flags = flags,
+            .close_tag = html_close,
+            .title = null,
+            .css = null,
+            .toc_marker = 0,
+            .header_count = 0,
+            .current_level = 0,
+            .toc = try Buffer.init(a, ""),
+            .header_ids = UsizeMap.init(a),
+            .renderer = Renderer{
+                .blockCode = blockCode,
+                .blockQuote = blockQuote,
+                .blockHtml = blockHtml,
+                .header = header,
+                .hrule = hrule,
+                .list = list,
+                .listItem = listItem,
+                .paragraph = paragraph,
+                .table = table,
+                .tableRow = tableRow,
+                .tableHeaderCell = tableHeaderCell,
+                .tableCell = tableCell,
+                .footNotes = footNotes,
+                .footNoteItem = footNoteItem,
+                .titleBlock = titleBlock,
+                .autoLink = autoLink,
+                .codeSpan = codeSpan,
+                .doubleEmphasis = doubleEmphasis,
+                .emphasis = emphasis,
+                .image = image,
+                .lineBreak = lineBreak,
+                .link = link,
+                .rawHtmlTag = rawHtmlTag,
+                .tripleEmphasis = tripleEmphasis,
+                .footnoteRef = footnoteRef,
+                .entity = entity,
+                .normalText = normalText,
+                .documentHeader = documentHeader,
+                .documentFooter = documentFooter,
+                .flags = 0,
+            },
+        };
+    }
+
+    pub fn blockCode(r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void {}
+    pub fn blockQuote(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn blockHtml(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn header(r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void {}
+    pub fn hrule(r: *Renderer, out: *Buffer) anyerror!void {}
+    pub fn list(r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void {}
+    pub fn listItem(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
+    pub fn paragraph(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
+    pub fn table(r: *Renderer, out: *Buffer, header_text: []const u8, body: []const u8, column_data: []usize) anyerror!void {}
+    pub fn tableRow(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn tableHeaderCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
+    pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
+    pub fn footNotes(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
+    pub fn footNoteItem(r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void {}
+    pub fn titleBlock(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn autoLink(r: *Renderer, out: *Buffer, link_text: []const u8, kind: LinkType) anyerror!void {}
+    pub fn codeSpan(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn doubleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn emphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn image(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, alt: []const u8) anyerror!void {}
+    pub fn lineBreak(r: *Renderer, out: *Buffer) anyerror!void {}
+    pub fn link(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, content: []const u8) anyerror!void {}
+    pub fn rawHtmlTag(r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void {}
+    pub fn tripleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn footnoteRef(r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void {}
+    pub fn entity(r: *Renderer, out: *Buffer, entity_text: []const u8) anyerror!void {}
+    pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
+    pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
+};
+
+test "HTML" {
+    var h = try HTML.init(std.debug.global_allocator, 0);
+}
