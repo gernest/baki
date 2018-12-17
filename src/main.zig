@@ -528,7 +528,7 @@ const HTML = struct {
             }
         }
         if (org < src.len) {
-            try append(src[org..]);
+            try out.append(src[org..]);
         }
     }
 };
