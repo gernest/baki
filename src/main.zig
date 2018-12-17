@@ -482,7 +482,11 @@ const HTML = struct {
         try attrEscape(out, text);
         try out.append("</code>");
     }
-    pub fn doubleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn doubleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try out.append("<strong>");
+        try out.append(text);
+        try out.append("</strong>");
+    }
     pub fn emphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn image(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, alt: []const u8) anyerror!void {}
     pub fn lineBreak(r: *Renderer, out: *Buffer) anyerror!void {}
