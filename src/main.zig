@@ -17,24 +17,24 @@ pub const UsizeMap = std.AutoHashMap([]const u8, usize);
 /// This code was ported from go's blackfriday  available at http://github.com/russross/blackfriday
 pub const Markdown = struct {
     /// markdown extensions supported by the parser.
-    const Extension = enum(usize) {
-        NoIntraEmphasis = 1,
-        Tables = 2,
-        FencedCode = 4,
-        Autolink = 8,
-        Strikethrough = 16,
-        LaxHtmlBlocks = 32,
-        SpaceHeaders = 64,
-        HardLineBreak = 128,
-        TabSizeEight = 256,
-        Footnotes = 512,
-        NoEmptyLineBeforeBlock = 1024,
-        HeaderIds = 2048,
-        Titleblock = 4096,
-        AutoHeaderIds = 8192,
-        BackslashLineBreak = 16384,
-        DefinitionLists = 32768,
-        JoinLines = 65536,
+    const Extension = struct {
+        pub const NoIntraEmphasis: usize = 1;
+        pub const Tables: usize = 2;
+        pub const FencedCode: usize = 4;
+        pub const Autolink: usize = 8;
+        pub const Strikethrough: usize = 16;
+        pub const LaxHtmlBlocks: usize = 32;
+        pub const SpaceHeaders: usize = 64;
+        pub const HardLineBreak: usize = 128;
+        pub const TabSizeEight: usize = 256;
+        pub const Footnotes: usize = 512;
+        pub const NoEmptyLineBeforeBlock: usize = 1024;
+        pub const HeaderIds: usize = 2048;
+        pub const Titleblock: usize = 4096;
+        pub const AutoHeaderIds: usize = 8192;
+        pub const BackslashLineBreak: usize = 16384;
+        pub const DefinitionLists: usize = 32768;
+        pub const JoinLines: usize = 65536;
     };
 
     const common_extensions: usize = 0 |
