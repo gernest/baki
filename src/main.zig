@@ -396,6 +396,12 @@ const Util = struct {
         return mem.trimRight(u8, s, suffix);
     }
 
+    fn skipUntilChar(text: []const u8, start: usize, c: usize) usize {
+        var i = start;
+        while (i < tag.len and text[i] != c) : (i += 1) {}
+        return i;
+    }
+
     fn skipSpace(tag: []const u8, i: usize) usize {
         while (i < tag.len and isSpace(tag[i])) : (i += 1) {}
         return i;
