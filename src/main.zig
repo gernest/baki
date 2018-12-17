@@ -443,7 +443,7 @@ const HTML = struct {
     current_level: usize,
     toc: Buffer,
     header_ids: UsizeMap,
-    params: Params,
+    params: ?Params,
     renderer: Markdown.Renderer,
 
     // Params options for configuring HTML renderer.
@@ -507,13 +507,7 @@ const HTML = struct {
             .current_level = 0,
             .toc = try Buffer.init(a, ""),
             .header_ids = UsizeMap.init(a),
-            .params = Params{
-                .abs_prefix = null,
-                .footnote_anchor_prefix = null,
-                .footnote_return_link_contents = null,
-                .header_id_prefix = null,
-                .header_id_suffix = null,
-            },
+            .params = null,
             .renderer = Renderer{
                 .blockCode = blockCode,
                 .blockQuote = blockQuote,
