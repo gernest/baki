@@ -396,6 +396,12 @@ const Util = struct {
         return mem.trimRight(u8, s, suffix);
     }
 
+    fn skipChar(data: []const u8, start: usize, c: u8) usize {
+        var i = start;
+        while (i < data.len and data[i] == c) : (i += 1) {}
+        return i;
+    }
+
     fn isRelativeLink(link: []const u8) bool {
         if (link[0] == '#') {
             return true;
