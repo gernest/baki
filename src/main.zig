@@ -581,7 +581,11 @@ const HTML = struct {
     pub fn lineBreak(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn link(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, content: []const u8) anyerror!void {}
     pub fn rawHtmlTag(r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void {}
-    pub fn tripleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn tripleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try out.append("<strong><em>");
+        try out.append(text);
+        try out.append("</em></strong>");
+    }
     pub fn footnoteRef(r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void {}
     pub fn entity(r: *Renderer, out: *Buffer, entity_text: []const u8) anyerror!void {}
     pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
