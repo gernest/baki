@@ -81,6 +81,7 @@ pub const Markdown = struct {
         link: fn (r: *Renderer, out: *Buffer, link: []const u8, title: []const u8, content: []const u8) anyerror!void,
         rawHtmlTag: fn (r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void,
         tripleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
+        strikethrough: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
         footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void,
 
         entity: fn (r: *Renderer, out: *Buffer, entity: []const u8) anyerror!void,
@@ -533,6 +534,7 @@ const HTML = struct {
                 .link = link,
                 .rawHtmlTag = rawHtmlTag,
                 .tripleEmphasis = tripleEmphasis,
+                .strikethrough = strikethrough,
                 .footnoteRef = footnoteRef,
                 .entity = entity,
                 .normalText = normalText,
@@ -582,6 +584,11 @@ const HTML = struct {
     pub fn link(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, content: []const u8) anyerror!void {}
     pub fn rawHtmlTag(r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void {}
     pub fn tripleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try out.append("<del>");
+        try out.append(text);
+        try out.append("</del>");
+    }
+    pub fn strikethrough(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
         try out.append("<strong><em>");
         try out.append(text);
         try out.append("</em></strong>");
