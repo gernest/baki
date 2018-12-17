@@ -400,6 +400,18 @@ const Util = struct {
         if (link[0] == '#') {
             return true;
         }
+        if (link.len >= 2 and link[0] == '/' and link[1] != '/') {
+            return true;
+        }
+        // current directory : begin with "./"
+        if (hasPrefix(link, "./")) {
+            return true;
+        }
+        // parent directory : begin with "../"
+        if (hasPrefix(link, "../")) {
+            return true;
+        }
+        return false;
     }
 };
 
