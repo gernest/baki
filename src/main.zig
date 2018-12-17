@@ -1,6 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
 const warn = std.debug.warn;
+const assert = std.debug.assert;
 const Buffer = std.Buffer;
 const unicode = @import("zunicode");
 const utf8 = unicode.utf8;
@@ -489,6 +490,39 @@ const HTML = struct {
     pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
+
+    const escape_quote = "&quot;";
+    const escape_and = "&amp;";
+    const escape_less = "&lt;";
+    const escape_greater = "&gt;";
+    const escape_nothing = "";
+    fn escapeSingleChar(c: u8) []const u8 {
+        return switch (c) {
+            '"' => escape_quote,
+            '&' => escape_and,
+            '<' => escape_less,
+            '>' => escape_greater,
+            else => escape_nothing,
+        };
+    }
+
+    fn attrEscape(out: *Buffer, src: []const u8) !void {
+        var org: usize = 0;
+        for (src) |ch, idx| {
+            const e = escapeSingleChar(ch);
+            if (e.len > 0) {
+                if (idx > org) {
+                    // copy all the normal characters since the last escape
+                    try out.append(src[org..idx]);
+                }
+                org += idx + 1;
+                try out.append(e);
+            }
+        }
+        if (org < src.len) {
+            try append(src[org..]);
+        }
+    }
 };
 
 test "HTML" {
