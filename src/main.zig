@@ -477,7 +477,11 @@ const HTML = struct {
     pub fn footNoteItem(r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void {}
     pub fn titleBlock(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn autoLink(r: *Renderer, out: *Buffer, link_text: []const u8, kind: LinkType) anyerror!void {}
-    pub fn codeSpan(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn codeSpan(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try out.append("<code>");
+        try attrEscape(out, text);
+        try out.append("</code>");
+    }
     pub fn doubleEmphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn emphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn image(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, alt: []const u8) anyerror!void {}
