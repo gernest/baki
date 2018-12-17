@@ -371,6 +371,36 @@ const Util = struct {
             try out.appendByte('\n');
         }
     }
+
+    /// returns true if sub_slice is within s.
+    pub fn contains(s: []const u8, sub_slice: []const u8) bool {
+        return mem.indexOf(u8, s, sub_slice) != null;
+    }
+
+    /// hasPrefix returns true if slice s begins with prefix.
+    pub fn hasPrefix(s: []const u8, prefix: []const u8) bool {
+        return s.len >= prefix.len and
+            equal(s[0..prefix.len], prefix);
+    }
+
+    pub fn hasSuffix(s: []const u8, suffix: []const u8) bool {
+        return s.len >= suffix.len and
+            equal(s[s.len - suffix.len ..], suffix);
+    }
+
+    pub fn trimPrefix(s: []const u8, prefix: []const u8) []const u8 {
+        return mem.trimLeft(u8, s, prefix);
+    }
+
+    pub fn trimSuffix(s: []const u8, suffix: []const u8) []const u8 {
+        return mem.trimRight(u8, s, suffix);
+    }
+
+    fn isRelativeLink(link: []const u8) bool {
+        if (link[0] == '#') {
+            return true;
+        }
+    }
 };
 
 // HTML implements the Markdown.Renderer interafce for html documents.
