@@ -403,6 +403,29 @@ const HTML = struct {
         header_id_suffix: ?[]const u8,
     };
 
+    /// Flags options that controls the HTML output
+    pub const Flags = struct {
+        pub const SkipHtml: usize = 1; // skip preformatted HTML blocks
+        pub const SkipStyle: usize = 2; // skip embedded <style> elements
+        pub const SkipImages: usize = 4; // skip embedded images
+        pub const SkipLinks: usize = 8; // skip all links
+        pub const Safelink: usize = 16; // only link to trusted protocols}
+        pub const NofollowLinks: usize = 32; // only link with re:usizel="nofollow"
+        pub const NoreferrerLinks: usize = 64; // only link with re:usizel="noreferrer"
+        pub const HrefTargetBlank: usize = 128; // add a blank target
+        pub const Toc: usize = 256; // generate a table of contents
+        pub const OmitContents: usize = 512; // skip the main contents (for a standalone table of contents)
+        pub const CompletePage: usize = 1024; // generate a complete HTML page
+        pub const UseXhtml: usize = 2048; // generate XHTML output instead of HTML
+        pub const UseSmartypants: usize = 4096; // enable smart punctuation substitutions
+        pub const SmartypantsFractions: usize = 8192; // enable smart fractions (with HTML_USE_SMARTYPANTS)
+        pub const SmartypantsDashes: usize = 16384; // enable smart dashes (with HTML_USE_SMARTYPANTS)
+        pub const SmartypantsLatexDashes: usize = 32768; // enable LaTeX-style dashes (with HTML_USE_SMARTYPANTS and HTML_SMARTYPANTS_DASHES)
+        pub const SmartypantsAngledQuotes: usize = 65536; // enable angled double quotes (with HTML_USE_SMARTYPANTS) for double quotes rendering
+        pub const SmartypantsQuotesNbsp: usize = 131072; // enable "French guillemets" (with HTML_USE_SMARTYPANTS)
+        pub const FootnoteReturnLinks: usize = 262144; // generate a link at the end of a footnote to return to the source
+    };
+
     const Renderer = Markdown.Renderer;
     const TextIter = Markdown.TextIter;
     const LinkType = Markdown.LinkType;
