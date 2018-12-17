@@ -365,6 +365,12 @@ const Util = struct {
             }
         }
     }
+
+    fn doubleSpace(out: *Buffer) !void {
+        if (out.len() > 0) {
+            try out.appendByte('\n');
+        }
+    }
 };
 
 // HTML implements the Markdown.Renderer interafce for html documents.
