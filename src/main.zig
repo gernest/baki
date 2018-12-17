@@ -103,7 +103,7 @@ pub const Markdown = struct {
     };
 
     const RefOverid = struct {
-        overide_fn: fn (*RefOverid, ref: []const u8) *Reference,
+        overideFn: fn (*RefOverid, ref: []const u8) *Reference,
     };
 
     const InlineParser = struct {
