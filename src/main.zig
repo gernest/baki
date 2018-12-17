@@ -487,7 +487,14 @@ const HTML = struct {
         try out.append(text);
         try out.append("</strong>");
     }
-    pub fn emphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn emphasis(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        if (text.len == 0) {
+            return;
+        }
+        try out.append("<em>");
+        try out.append(text);
+        try out.append("</em>");
+    }
     pub fn image(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, alt: []const u8) anyerror!void {}
     pub fn lineBreak(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn link(r: *Renderer, out: *Buffer, link_text: []const u8, title: []const u8, content: []const u8) anyerror!void {}
