@@ -464,6 +464,8 @@ const HTML = struct {
     params: ?Params,
     renderer: Markdown.Renderer,
 
+    pub const VERSION = "1.5";
+
     // Params options for configuring HTML renderer.
     const Params = struct {
         /// prepend this to each relative url.
@@ -642,7 +644,57 @@ const HTML = struct {
         try attrEscape(out, text);
     }
 
-    pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
+    pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {
+        var html = @fieldParentPtr(HTML, "renderer", r);
+        if (!html.hasFlag(Flags.CompletePage)) {
+            return;
+        }
+        var ending: u8 = 0;
+        if (html.hasFlag(Flags.UseXhtml)) {
+            try out.append("<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" ");
+            try out.append("\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\n");
+            try out.append("<html xmlns=\"http://www.w3.org/1999/xhtml\">\n");
+            ending = '/';
+        } else {
+            try out.append("<!DOCTYPE html>\n");
+            try out.append("<html>\n");
+        }
+        try out.append("<head>\n");
+        try out.append("  <title>");
+        if (html.title) |v| {
+            try out.append(v);
+        }
+        try out.append("</title>\n");
+        try out.append("  <meta name=\"GENERATOR\" content=\"Blackfriday Markdown Processor v");
+        try out.append(VERSION);
+        try out.append("\"");
+        if (ending != 0) {
+            try out.appendByte(ending);
+        }
+        try out.append(">\n");
+        try out.append("  <meta charset=\"utf-8\"");
+        if (ending != 0) {
+            try out.appendByte(ending);
+        }
+        try out.append(">\n");
+        if (html.css) |css| {
+            try out.append("  <link rel=\"stylesheet\" type=\"text/css\" href=\"");
+            try attrEscape(out, css);
+            try out.append("\"");
+            if (ending != 0) {
+                try out.appendByte(ending);
+            }
+            try out.append(">\n");
+        }
+        try out.append("</head>\n");
+        try out.append("<body>\n");
+        html.toc_marker = out.len();
+    }
+
+    pub fn hasFlag(self: *HTML, f: usize) bool {
+        return (self.flags & f) != 0;
+    }
+
     pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
 
     const escape_quote = "&quot;";
