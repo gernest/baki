@@ -82,7 +82,7 @@ pub const Markdown = struct {
         rawHtmlTag: fn (r: *Renderer, out: *Buffer, tag: []const u8) anyerror!void,
         tripleEmphasis: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
         strikethrough: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
-        footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void,
+        footnoteRef: fn (r: *Renderer, out: *Buffer, ref: []const u8, id: usize) anyerror!void,
 
         entity: fn (r: *Renderer, out: *Buffer, entity: []const u8) anyerror!void,
         normalText: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
@@ -203,7 +203,7 @@ const Util = struct {
     }
 
     fn isalnum(c: u8) bool {
-        return (c >= '0' and c <= '9') or isletter(c);
+        return (c >= '0' and c <= '9') or isLetter(c);
     }
 
     /// Replace tab characters with spaces, aligning to the next TAB_SIZE column.
@@ -431,6 +431,23 @@ const Util = struct {
         }
         return false;
     }
+
+    fn slugify(out: *Buffer, in: []const u8) !void {
+        const a = out.len();
+        var sym = false;
+        for (in) |c| {
+            if (isalnum(c)) {
+                sym = false;
+                try out.appendByte(c);
+            } else if (sym) {
+                continue;
+            } else {
+                try out.appendByte('-');
+                sym = true;
+            }
+        }
+        //TODO: think more about this and correctly implement it.
+    }
 };
 
 // HTML implements the Markdown.Renderer interafce for html documents.
@@ -593,7 +610,29 @@ const HTML = struct {
         try out.append(text);
         try out.append("</em></strong>");
     }
-    pub fn footnoteRef(r: *Renderer, out: *Buffer, ref: []const u8, id: []const u8) anyerror!void {}
+
+    pub fn footnoteRef(r: *Renderer, out: *Buffer, ref: []const u8, id: usize) anyerror!void {
+        const html = @fieldParentPtr(HTML, "renderer", r);
+        try out.append("<sup class=\"footnote-ref\" id=\"");
+        try out.append("fnref:");
+        if (html.params) |params| {
+            if (params.footnote_anchor_prefix) |v| {
+                try out.append(v);
+            }
+        }
+        try Util.slugify(out, ref);
+        try out.append("\"><a href=\"#");
+        try out.append("fn:");
+        if (html.params) |params| {
+            if (params.footnote_anchor_prefix) |v| {
+                try out.append(v);
+            }
+        }
+        try Util.slugify(out, ref);
+        try out.append("\">");
+        var stream = &std.BufferOutStream.init(out).stream;
+        try stream.print("{}", id);
+    }
     pub fn entity(r: *Renderer, out: *Buffer, entity_text: []const u8) anyerror!void {}
     pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
