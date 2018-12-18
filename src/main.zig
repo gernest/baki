@@ -114,13 +114,41 @@ pub const Markdown = struct {
     // inline parsers
     emphasis: InlineParser,
 
+    const BaseReference = struct {
+        link: []const u8,
+        title: []const u8,
+        note_id: ?usize,
+        hash_block: bool,
+        text: []const u8,
+    };
+
     const Parser = struct {
         render: *Renderer,
+        refs: std.AutoHashMap([]const u8, *BaseReference),
         inline_callbacks: [256]?*InlineParser,
         flags: usize,
         nesting: usize,
         max_nesting: usize,
         inside_link: bool,
+        allocator: *mem.Allocator,
+        notes: std.ArrayList(*BaseReference),
+        notes_record: std.AutoHashMap([]const u8, bool),
+
+        // newBaseReference is ahelper for creating a *BaseReference object.
+        fn newBaseReference(self: *Parser) anyerror!*BaseReference {
+            return self.allocator.createOne(BaseReference);
+        }
+
+        fn deinit(self: *Parser) !void {
+            const ref = &self.refs;
+            var it = &ref.iterator();
+            while (it.next()) |v| {
+                self.destroy(v);
+            }
+            ref.deinit();
+            self.notes.deinit();
+            self.notes_record.deinit();
+        }
 
         fn inlineBlock(self: *Parser, out: *Buffer, data: []const u8) !void {
             if (self.nexting >= self.max_nesting) {
