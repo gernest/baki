@@ -638,7 +638,10 @@ const HTML = struct {
         try out.append(entity_text);
     }
 
-    pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try attrEscape(out, text);
+    }
+
     pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
 
