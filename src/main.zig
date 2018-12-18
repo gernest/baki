@@ -633,7 +633,11 @@ const HTML = struct {
         var stream = &std.BufferOutStream.init(out).stream;
         try stream.print("{}", id);
     }
-    pub fn entity(r: *Renderer, out: *Buffer, entity_text: []const u8) anyerror!void {}
+
+    pub fn entity(r: *Renderer, out: *Buffer, entity_text: []const u8) anyerror!void {
+        try out.append(entity_text);
+    }
+
     pub fn normalText(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn documentHeader(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
