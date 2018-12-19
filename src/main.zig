@@ -443,6 +443,44 @@ const Util = struct {
         return null;
     }
 
+    fn tripleEmphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, offset: usize, c: u8) !?usize {
+        var i: usize = 0;
+        const ctx = data[offset..];
+        var buf = &try Buffer.init(p.allocator, "");
+        defer buf.deinit();
+        while (i < ctx.len) {
+            if (findEmphChar(ctx[i..], c)) |length| {
+                i += length;
+                // skip whitespace preceded symbols
+                if (ctx[i] != c or isSpace(ctx[i - 1])) {
+                    continue;
+                }
+                if (i + 2 < ctx.len and ctx[i + 1] == c and ctx[i + 2] == c) {
+                    try buf.resize(0);
+                    try p.inlineBlock(buf, ctx[0..i]);
+                    if (buf.len() > 0) {
+                        try p.renderer.tripleEmphasis(out, buf.toSlice());
+                    }
+                    return i + 3;
+                } else if (i + 1 < ctx.len & &ctx[i + 1] == c) {
+                    // double symbol found, hand over to emph1
+                    const e = try emphasis(p, out, data[offset - 2 ..], c);
+                    if (e) |length| {
+                        return length - 2;
+                    }
+                    return null;
+                }
+                const e = try doubleEmphasis(p, out, data[offset - 1], c);
+                if (e) |length| {
+                    return length - 1;
+                }
+                return null;
+            }
+            return null;
+        }
+        return null;
+    }
+
     fn doubleSpace(out: *Buffer) !void {
         if (out.len() > 0) {
             try out.appendByte('\n');
