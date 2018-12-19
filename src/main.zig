@@ -380,12 +380,15 @@ const Util = struct {
         return null;
     }
 
-    fn emphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) usize {
+    fn emphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) !?usize {
         var i: usize = 0;
         // skip one symbol if coming from emph3
         if (data.len > 1 and data[0] == c and data[1] == c) {
             i = 1;
         }
+        var buf = &try Buffer.init(p.allocator, "");
+        defer buf.deinit();
+
         while (i < data.len) {
             const length = findEmphChar(ctx[i..], c);
             if (length == 0) {
@@ -401,10 +404,17 @@ const Util = struct {
             }
             if (data[i] == c and !Util.isSpace(data[i - 1])) {
                 if ((p.flags & Extension.NoIntraEmphasis) != 0) {
-                    if (i + 1 == data.len or isSpace(data[i + 1]) or ispu) {}
+                    if (i + 1 == data.len or isSpace(data[i + 1]) or isPunct(data[i + 1])) {
+                        continue;
+                    }
                 }
+                try buf.resize(0);
+                try p.inline(buf,data[0..i]);
+                try p.renderer.emphasis(out,buf.toSlice());
+                return i+1;
             }
         }
+        return null;
     }
 
     fn doubleSpace(out: *Buffer) !void {
