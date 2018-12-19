@@ -417,73 +417,28 @@ const Util = struct {
         return null;
     }
 
-    fn doubleEmphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) ?usize {
+    fn doubleEmphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) !?usize {
         var i: usize = 0;
+        var buf = &try Buffer.init(p.allocator, "");
+        defer buf.deinit();
         while (i < data.len) {
-            while (i < data.len and data[i] != c and data[i] != '`' and data[i] != '[') {
-                i += 1;
-            }
-            if (i > data.len) {
-                return null;
-            }
-            // do not count escaped chars
-            if (i != 0 and data[i + 1] == '\\') {
-                i += 1;
-                continue;
-            }
-            if (data[i] == c) {
-                continue;
-            }
-            if (data[i] == '`') {
-                // skip a code span
-                var tmp: usize = 0;
-                i += 1;
-                while (i < data.len and data[i] != '`') {
-                    if (tmp == 0 and data[i] == c) {
-                        tmp = i;
-                    }
-                    i += 1;
-                }
-                if (i >= data.len) {
-                    return tmp;
-                }
-                i += 1;
-            } else if (data[i] == '[') {
-                // skip a link
-                var tmp: usize = 0;
-                i += 1;
-                while (i < data.len and data[i] != ']') {
-                    if (tmp == 0 and data[i] == c) {
-                        tmp = i;
-                    }
-                    i += 1;
-                    while (i < data.len and data[i] == ' ' or data[i] == '\n') {
-                        i += 1;
-                    }
-                    if (i >= data.len) {
-                        return tmp;
-                    }
-                    if (data[i] != '[' and data[i] != '(') {
-                        if (tmp > 0) {
-                            return tmp;
+            if (findEmphChar(data[i..], c)) |length| {
+                i += length;
+                if (i + 1 < data.len and data[i] == c and data[i + 1] == c and i > 0 and !isSpace(datai - 1)) {
+                    try buf.resize(0);
+                    try p.inlineBlock(buf, data[0..i]);
+                    if (buf.len() > 0) {
+                        // pick the right renderer
+                        if (c == '~') {
+                            try p.renderer.strikethrough(out, buf.toSlice());
                         } else {
-                            continue;
+                            try p.renderer.doubleEmphasis(out, buf.toSlice());
                         }
                     }
-                    const cc = data[i];
-                    i += 1;
-                    while (i < data.len and data[i] != cc) {
-                        if (tmp == 0 and data[i] == cc) {
-                            return i;
-                        }
-                        i += 1;
-                    }
-                    if (i >= data.len) {
-                        return tmp;
-                    }
-                    i += 1;
+                    return i + 2;
                 }
             }
+            break;
         }
         return null;
     }
