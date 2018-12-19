@@ -213,6 +213,16 @@ pub const Markdown = struct {
 
 // Util are utility/helper functions.
 const Util = struct {
+    const punct_marks = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+    fn isPunct(c: u8) bool {
+        for (punct_marks) |char| {
+            if (c == char) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// returns true if c is a whitespace character.
     fn isSpace(c: u8) bool {
         return isHorizontalSpace(c) or isVersicalSpace(c);
@@ -305,12 +315,12 @@ const Util = struct {
         return indent_size;
     }
 
-    fn findEmphChar(data: []const u8, c: u8) usize {
+    fn findEmphChar(data: []const u8, c: u8) ?usize {
         var i: usize = 0;
         while (i < data.len) {
             while (i < data.len and data[i] != c and data[i] != '`' and data[i] != '[') : (i += 1) {}
             if (i >= data.len) {
-                return 0;
+                return null;
             }
             // do not count escaped chars
             if (i != 0 and data[i - 1] == '\\') {
@@ -367,7 +377,7 @@ const Util = struct {
                 }
             }
         }
-        return 0;
+        return null;
     }
 
     fn emphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) usize {
@@ -390,7 +400,9 @@ const Util = struct {
                 continue;
             }
             if (data[i] == c and !Util.isSpace(data[i - 1])) {
-                if ((p.flags & Extension.NoIntraEmphasis) != 0) {}
+                if ((p.flags & Extension.NoIntraEmphasis) != 0) {
+                    if (i + 1 == data.len or isSpace(data[i + 1]) or ispu) {}
+                }
             }
         }
     }
