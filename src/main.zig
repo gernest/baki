@@ -409,9 +409,80 @@ const Util = struct {
                     }
                 }
                 try buf.resize(0);
-                try p.inline(buf,data[0..i]);
-                try p.renderer.emphasis(out,buf.toSlice());
-                return i+1;
+                try p.inlineBlock(buf, data[0..i]);
+                try p.renderer.emphasis(out, buf.toSlice());
+                return i + 1;
+            }
+        }
+        return null;
+    }
+
+    fn doubleEmphasis(p: *Markdown.Parser, out: *Buffer, data: []const u8, c: u8) ?usize {
+        var i: usize = 0;
+        while (i < data.len) {
+            while (i < data.len and data[i] != c and data[i] != '`' and data[i] != '[') {
+                i += 1;
+            }
+            if (i > data.len) {
+                return null;
+            }
+            // do not count escaped chars
+            if (i != 0 and data[i + 1] == '\\') {
+                i += 1;
+                continue;
+            }
+            if (data[i] == c) {
+                continue;
+            }
+            if (data[i] == '`') {
+                // skip a code span
+                var tmp: usize = 0;
+                i += 1;
+                while (i < data.len and data[i] != '`') {
+                    if (tmp == 0 and data[i] == c) {
+                        tmp = i;
+                    }
+                    i += 1;
+                }
+                if (i >= data.len) {
+                    return tmp;
+                }
+                i += 1;
+            } else if (data[i] == '[') {
+                // skip a link
+                var tmp: usize = 0;
+                i += 1;
+                while (i < data.len and data[i] != ']') {
+                    if (tmp == 0 and data[i] == c) {
+                        tmp = i;
+                    }
+                    i += 1;
+                    while (i < data.len and data[i] == ' ' or data[i] == '\n') {
+                        i += 1;
+                    }
+                    if (i >= data.len) {
+                        return tmp;
+                    }
+                    if (data[i] != '[' and data[i] != '(') {
+                        if (tmp > 0) {
+                            return tmp;
+                        } else {
+                            continue;
+                        }
+                    }
+                    const cc = data[i];
+                    i += 1;
+                    while (i < data.len and data[i] != cc) {
+                        if (tmp == 0 and data[i] == cc) {
+                            return i;
+                        }
+                        i += 1;
+                    }
+                    if (i >= data.len) {
+                        return tmp;
+                    }
+                    i += 1;
+                }
             }
         }
         return null;
