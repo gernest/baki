@@ -209,6 +209,7 @@ pub const Markdown = struct {
                 // ## Header 2
                 // ...
                 // ###### Header 6
+                if (self.isPrefixHeader(data[i..])) {}
             }
         }
 
@@ -226,6 +227,43 @@ pub const Markdown = struct {
                 }
             }
             return true;
+        }
+
+        fn prefixHeader(self: *Parser, data: []const u8) usize {
+            var level: usize = 0;
+            while (level < 6 and data[level] == '#') {
+                level += 1;
+            }
+            const i = Util.skipChar(data, level, ' ');
+            var end = Util.skipUntilChar(data, i, '\n');
+            var skip = end;
+            var id: []const u8 = "";
+            if (self.flags & Extension.HeaderIds != 0) {
+                var j = i;
+                var k: usize = 0;
+                // find start/end of header id
+                while (j < end - 1 and (data[j] != '{' or data[j + 1] != '#')) : (i += 1) {}
+                k = j + 1;
+                while (k < end and data[k] != '}') : (k += 1) {}
+                // extract header id if found
+                if (j < end and k < end) {
+                    id = data[j + 1 .. k];
+                    end = j;
+                    skip = k + 1;
+                    while (end > 0 and data[end - 1] == ' ') {
+                        end -= 1;
+                    }
+                }
+            }
+            while (end > 0 and data[end - 1] == '#') {
+                if (Util.isBackslashEscaped(data[i..], end - 1)) {
+                    break;
+                }
+                end -= 1;
+            }
+            while (end > 0 and data[end - 1] == ' ') {
+                end -= 1;
+            }
         }
     };
 
@@ -325,6 +363,14 @@ const Util = struct {
     /// returns true if c is a whitespace character.
     fn isSpace(c: u8) bool {
         return isHorizontalSpace(c) or isVersicalSpace(c);
+    }
+
+    fn isBackslashEscaped(data: []const u8, i: usize) bool {
+        var bs: usize = 0;
+        while ((@intCast(isize, i) - @intCast(isize, bs) - 1) >= 0 and data[i - bs - 1] == '\\') {
+            bs += 1;
+        }
+        return bs == 1;
     }
 
     fn isHorizontalSpace(c: u8) bool {
