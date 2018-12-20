@@ -103,6 +103,15 @@ pub const Markdown = struct {
 
     const TextIter = struct {
         next: fn (*TextIter) anyerror!void,
+
+        fn text(self: *TextIter) bool {
+            if (self.next(self)) {
+                return true;
+            } else |_| {
+                // TODO handle OutOfMemory error here
+                return false;
+            }
+        }
     };
 
     const Reference = struct {
@@ -797,7 +806,17 @@ const HTML = struct {
 
     pub fn list(r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void {}
     pub fn listItem(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
-    pub fn paragraph(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
+
+    pub fn paragraph(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {
+        const mark = out.len();
+        try Util.doubleSpace(out);
+        try out.append("<p>");
+        if (!text_iter.text()) {
+            try out.resize(mark);
+            return;
+        }
+        try out.append("</p>\n");
+    }
 
     pub fn table(r: *Renderer, out: *Buffer, header_text: []const u8, body: []const u8, column_data: []usize) anyerror!void {
         try Util.doubleSpace(out);
