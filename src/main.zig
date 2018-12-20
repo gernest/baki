@@ -213,6 +213,28 @@ pub const Markdown = struct {
 
 // Util are utility/helper functions.
 const Util = struct {
+    ///  writes to buffer bytes s with occurance of old replaced with new. n is
+    /// the max number of replacements if n<0 then there is no limit to the
+    /// number of replcacement.
+    fn replace(out: *Buffer, s: []const u8, old: []const u8, new: []const u8, n: isize) !void {
+        var i: usize = 0;
+        var replacement: isize = 0;
+        if (n < 0) {
+            replacement = @intCast(isize, s.len);
+        }
+        while (i < s.len and n < replacement) {
+            if (mem.indexOf(u8, s[i..], old)) |idx| {
+                try out.append(s[i .. idx + i]);
+                try out.append(new);
+                i += idx + old.len;
+                replacement += 1;
+            } else {
+                try out.append(s[i..]);
+                return;
+            }
+        }
+    }
+
     fn map(out: *Buffer, mapping: fn (r: i32) i32, src: []const u8) !void {
         var max_bytes = src.len;
         try out.resize(max_bytes);
@@ -609,6 +631,14 @@ test "Util.map" {
 
     try Util.toLower(buf, "mamaMia");
     assert(buf.eql("mamamia"));
+}
+
+test "Util.replace" {
+    var a = std.debug.global_allocator;
+    var buf = &try Buffer.init(a, "");
+    defer buf.deinit();
+    try Util.replace(buf, "mamaMia ameenda na mimi", "m", "x", -1);
+    assert(buf.eql("xaxaMia axeenda na xixi"));
 }
 
 // HTML implements the Markdown.Renderer interafce for html documents.
