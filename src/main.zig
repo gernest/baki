@@ -54,6 +54,14 @@ pub const Markdown = struct {
         Email,
     };
 
+    // TableAlignment is html table alignment options
+    pub const TableAlignment = enum {
+        None,
+        Left,
+        Right,
+        Center,
+    };
+
     const Renderer = struct {
         blockCode: fn (r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void,
         blockQuote: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
@@ -65,7 +73,7 @@ pub const Markdown = struct {
         paragraph: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void,
         table: fn (r: *Renderer, out: *Buffer, header: []const u8, body: []const u8, column_data: []usize) anyerror!void,
         tableRow: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
-        tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
+        tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, alignment: TableAlignment) anyerror!void,
         tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
         footNotes: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void,
         footNoteItem: fn (r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void,
@@ -703,6 +711,7 @@ const HTML = struct {
         pub const FootnoteReturnLinks: usize = 262144; // generate a link at the end of a footnote to return to the source
     };
 
+    const TableAlignment = Markdown.TableAlignment;
     const Renderer = Markdown.Renderer;
     const TextIter = Markdown.TextIter;
     const LinkType = Markdown.LinkType;
@@ -806,7 +815,27 @@ const HTML = struct {
         try out.append("\n</tr>\n");
     }
 
-    pub fn tableHeaderCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
+    pub fn tableHeaderCell(r: *Renderer, out: *Buffer, text: []const u8, alignment: TableAlignment) anyerror!void {
+        try Util.doubleSpace(out);
+        switch (alignment) {
+            TableAlignment.Left => {
+                try out.append("<th align=\"left\">");
+            },
+            TableAlignment.Right => {
+                try out.append("<th align=\"right\">");
+            },
+            TableAlignment.Center => {
+                try out.append("<th align=\"center\">");
+            },
+            TableAlignment.None => {
+                try out.append("<th>");
+            },
+            else => unreachable,
+        }
+        try out.append(text);
+        try out.append("</th>");
+    }
+
     pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn footNotes(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
     pub fn footNoteItem(r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void {}
