@@ -758,7 +758,13 @@ const HTML = struct {
     }
 
     pub fn blockCode(r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void {}
-    pub fn blockQuote(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+
+    pub fn blockQuote(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try Util.doubleSpace(out);
+        try out.append("<blockquote>\n");
+        try out.append(text);
+        try out.append("</blockquote>\n");
+    }
 
     pub fn blockHtml(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
         const html = @fieldParentPtr(HTML, "renderer", r);
