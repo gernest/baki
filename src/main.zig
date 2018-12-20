@@ -643,6 +643,7 @@ test "Util.replace" {
 
 // HTML implements the Markdown.Renderer interafce for html documents.
 const HTML = struct {
+    allocator: *mem.Allocator,
     flags: usize,
     close_tag: []const u8,
     title: ?[]const u8,
@@ -709,6 +710,7 @@ const HTML = struct {
 
     pub fn init(a: *mem.Allocator, flags: usize) !HTML {
         return HTML{
+            .allocator = a,
             .flags = flags,
             .close_tag = html_close,
             .title = null,
@@ -769,7 +771,18 @@ const HTML = struct {
     pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn footNotes(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
     pub fn footNoteItem(r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void {}
-    pub fn titleBlock(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+
+    pub fn titleBlock(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        const html = @fieldParentPtr(HTML, "renderer", r);
+        var buf = &try Buffer.init(html.allocator, "");
+        defer buf.deinit();
+        const txt = Util.trimPrefix(text, "% ");
+        try Util.replace(buf, txt, "\n% ", "\n", -1);
+        try out.append("<h1 class=\"title\">");
+        try out.append(buf.toSlice());
+        try out.append("\n</h1>");
+    }
+
     pub fn autoLink(r: *Renderer, out: *Buffer, link_text: []const u8, kind: LinkType) anyerror!void {}
     pub fn codeSpan(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
         try out.append("<code>");
