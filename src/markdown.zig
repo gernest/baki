@@ -192,15 +192,44 @@ pub const Markdown = struct {
             }
             self.nesting -= 1;
         }
+
+        fn block(self: *Parser, out: *Buffer, data: []const u8) !void {
+            if (data.len == 0 or data[data.len - 1] != '\n') {
+                return error.MissingTerminalNewLine;
+            }
+            if (self.nesting >= self.max_nesting) {
+                return;
+            }
+            self.nesting += 1;
+            var i: usize = 0;
+            while (i < data.len) {
+                // prefixed header:
+                //
+                // # Header 1
+                // ## Header 2
+                // ...
+                // ###### Header 6
+            }
+        }
+
+        fn isPrefixHeader(self: *Parser, data: []const u8) bool {
+            if (data[0] != '#') {
+                return false;
+            }
+            if (self.flags & Extension.SpaceHeaders != 0) {
+                var level: usize = 0;
+                while (level < 6 and data[level] == '#') {
+                    level += 1;
+                }
+                if (data[level] != ' ') {
+                    return false;
+                }
+            }
+            return true;
+        }
     };
 
-    fn emphasisFn(
-        inline_parse: *InlineParser,
-        p: *Parser,
-        out: *Buffer,
-        data: []const u8,
-        offset: usize,
-    ) void {
+    fn emphasisFn(inline_parse: *InlineParser, p: *Parser, out: *Buffer, data: []const u8, offset: usize) void {
         const self = @fieldParentPtr(Markdown, "emphasis", inline_parse);
         self.parseEmphasis(p, out, data, offset);
     }
@@ -221,11 +250,6 @@ pub const Markdown = struct {
         extensions: usize,
         ref_overid: ?*RefOverid,
     };
-
-    pub fn render(
-        input: []const u8,
-        renderer: *Renderer,
-    ) void {}
 };
 
 // Util are utility/helper functions.
