@@ -213,6 +213,42 @@ pub const Markdown = struct {
 
 // Util are utility/helper functions.
 const Util = struct {
+    fn map(out: *Buffer, mapping: fn (r: i32) i32, src: []const u8) !void {
+        var max_bytes = src.len;
+        try out.resize(max_bytes);
+        var nb_bytes: usize = 0;
+        var i: usize = 0;
+        while (i < src.len) {
+            var wid: usize = 1;
+            var r = @intCast(i32, src[i]);
+            if (r >= utf8.rune_self) {
+                const rune = try utf8.decodeRune(src[i..]);
+                wid = rune.size;
+                r = rune.value;
+            }
+            r = mapping(r);
+            if (r >= 0) {
+                const rune_length = try utf8.runeLen(r);
+                if (nb_bytes + rune_length > max_bytes) {
+                    max_bytes = max_bytes * 2 + utf8.utf_max;
+                    try out.resize(max_bytes);
+                }
+                const w = try utf8.encodeRune(out.toSlice()[nb_bytes..max_bytes], r);
+                nb_bytes += w;
+            }
+            i += wid;
+        }
+        try out.resize(nb_bytes);
+    }
+
+    fn toUpper(buf: *Buffer, s: []const u8) !void {
+        return map(buf, unicode.toUpper, s);
+    }
+
+    fn toLower(buf: *Buffer, s: []const u8) !void {
+        return map(buf, unicode.toLower, s);
+    }
+
     const punct_marks = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
     fn isPunct(c: u8) bool {
         for (punct_marks) |char| {
@@ -563,6 +599,17 @@ const Util = struct {
         //TODO: think more about this and correctly implement it.
     }
 };
+
+test "Util.map" {
+    var a = std.debug.global_allocator;
+    var buf = &try Buffer.init(a, "");
+    defer buf.deinit();
+    try Util.toUpper(buf, "mamaMia");
+    assert(buf.eql("MAMAMIA"));
+
+    try Util.toLower(buf, "mamaMia");
+    assert(buf.eql("mamamia"));
+}
 
 // HTML implements the Markdown.Renderer interafce for html documents.
 const HTML = struct {
