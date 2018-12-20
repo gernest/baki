@@ -799,7 +799,13 @@ const HTML = struct {
         try out.append("</tbody>\n</table>\n");
     }
 
-    pub fn tableRow(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+    pub fn tableRow(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        try Util.doubleSpace(out);
+        try out.append("<tr>\n");
+        try out.append(text);
+        try out.append("\n</tr>\n");
+    }
+
     pub fn tableHeaderCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn footNotes(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
