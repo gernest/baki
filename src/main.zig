@@ -789,7 +789,16 @@ const HTML = struct {
     pub fn list(r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void {}
     pub fn listItem(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn paragraph(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
-    pub fn table(r: *Renderer, out: *Buffer, header_text: []const u8, body: []const u8, column_data: []usize) anyerror!void {}
+
+    pub fn table(r: *Renderer, out: *Buffer, header_text: []const u8, body: []const u8, column_data: []usize) anyerror!void {
+        try Util.doubleSpace(out);
+        try out.append("<table>\n<thead>\n");
+        try out.append(header_text);
+        try out.append("</thead>\n\n<tbody>\n");
+        try out.append(body);
+        try out.append("</tbody>\n</table>\n");
+    }
+
     pub fn tableRow(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
     pub fn tableHeaderCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
