@@ -771,7 +771,15 @@ const HTML = struct {
     }
 
     pub fn header(r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void {}
-    pub fn hrule(r: *Renderer, out: *Buffer) anyerror!void {}
+
+    pub fn hrule(r: *Renderer, out: *Buffer) anyerror!void {
+        const html = @fieldParentPtr(HTML, "renderer", r);
+        try Util.doubleSpace(out);
+        try out.append("<hr");
+        try out.append(html.close_tag);
+        try out.appendByte('\n');
+    }
+
     pub fn list(r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void {}
     pub fn listItem(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
     pub fn paragraph(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
