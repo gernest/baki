@@ -66,7 +66,7 @@ pub const Markdown = struct {
         blockCode: fn (r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void,
         blockQuote: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
         blockHtml: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
-        header: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void,
+        header: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: ?[]const u8) anyerror!void,
         hrule: fn (r: *Renderer, out: *Buffer) anyerror!void,
         list: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void,
         listItem: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
@@ -794,7 +794,7 @@ const HTML = struct {
         try out.appendByte('\n');
     }
 
-    pub fn header(r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void {}
+    pub fn header(r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: ?[]const u8) anyerror!void {}
 
     pub fn hrule(r: *Renderer, out: *Buffer) anyerror!void {
         const html = @fieldParentPtr(HTML, "renderer", r);
