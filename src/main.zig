@@ -74,7 +74,7 @@ pub const Markdown = struct {
         table: fn (r: *Renderer, out: *Buffer, header: []const u8, body: []const u8, column_data: []usize) anyerror!void,
         tableRow: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
         tableHeaderCell: fn (r: *Renderer, out: *Buffer, text: []const u8, alignment: TableAlignment) anyerror!void,
-        tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void,
+        tableCell: fn (r: *Renderer, out: *Buffer, text: []const u8, alignment: TableAlignment) anyerror!void,
         footNotes: fn (r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void,
         footNoteItem: fn (r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void,
         titleBlock: fn (r: *Renderer, out: *Buffer, text: []const u8) anyerror!void,
@@ -836,7 +836,27 @@ const HTML = struct {
         try out.append("</th>");
     }
 
-    pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, flags: usize) anyerror!void {}
+    pub fn tableCell(r: *Renderer, out: *Buffer, text: []const u8, alignment: TableAlignment) anyerror!void {
+        try Util.doubleSpace(out);
+        switch (alignment) {
+            TableAlignment.Left => {
+                try out.append("<tdalign=\"left\">");
+            },
+            TableAlignment.Right => {
+                try out.append("<td align=\"right\">");
+            },
+            TableAlignment.Center => {
+                try out.append("<td align=\"center\">");
+            },
+            TableAlignment.None => {
+                try out.append("<td>");
+            },
+            else => unreachable,
+        }
+        try out.append(text);
+        try out.append("</td>");
+    }
+
     pub fn footNotes(r: *Renderer, out: *Buffer, text_iter: *TextIter) anyerror!void {}
     pub fn footNoteItem(r: *Renderer, out: *Buffer, name: []const u8, text: []const u8, flags: usize) anyerror!void {}
 
