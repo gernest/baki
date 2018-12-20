@@ -1006,6 +1006,22 @@ const HTML = struct {
         return (self.flags & f) != 0;
     }
 
+    pub fn ensureUniqueHeaderID(self: *HTML, buf: *Buffer, id: []const u8) !void {
+        var stream = &BufferOutStream.init(buf).stream;
+        var m = &self.HeaderIds;
+        const kv = try m.get(id);
+        if (kv != null) {
+            const count = kv.?.value + 1;
+            try stream.print("{}-{}", id, count);
+            _ = try m.put(buf.toSlice(), count);
+            return;
+        }
+        const count = 0;
+        try stream.print("{}-{}", id, count);
+        _ = try m.put(buf.toSlice(), count);
+        return;
+    }
+
     pub fn documentFooter(r: *Renderer, out: *Buffer) anyerror!void {}
 
     const escape_quote = "&quot;";
