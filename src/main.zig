@@ -759,7 +759,17 @@ const HTML = struct {
 
     pub fn blockCode(r: *Renderer, out: *Buffer, text: []const u8, info_string: []const u8) anyerror!void {}
     pub fn blockQuote(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
-    pub fn blockHtml(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {}
+
+    pub fn blockHtml(r: *Renderer, out: *Buffer, text: []const u8) anyerror!void {
+        const html = @fieldParentPtr(HTML, "renderer", r);
+        if (html.hasFlag(Flags.SkipHtml)) {
+            return;
+        }
+        try Util.doubleSpace(out);
+        try out.append(text);
+        try out.appendByte('\n');
+    }
+
     pub fn header(r: *Renderer, out: *Buffer, text_iter: *TextIter, level: usize, id: usize) anyerror!void {}
     pub fn hrule(r: *Renderer, out: *Buffer) anyerror!void {}
     pub fn list(r: *Renderer, out: *Buffer, text_iter: *TextIter, flags: usize) anyerror!void {}
