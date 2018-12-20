@@ -229,6 +229,24 @@ pub const Markdown = struct {
             return true;
         }
 
+        const xinline = struct {
+            out: *Buffer,
+            p: *Parser,
+            text: []const u8,
+            text_iter: TextIter,
+            fn init(p: *Parser, out: *Buffer, text: []const u8) xinline {
+                return xinline{
+                    .out = out,
+                    .p = p,
+                    .text_iter = TextIter{ .next = iter },
+                };
+            }
+            fn iter(x: *TextIter) anyerror!void {
+                var p = @fieldParentPtr(xinline, "text_iter", x);
+                return p.p.inlineBlock(p.out, p.text);
+            }
+        };
+
         fn prefixHeader(self: *Parser, data: []const u8) usize {
             var level: usize = 0;
             while (level < 6 and data[level] == '#') {
@@ -264,6 +282,11 @@ pub const Markdown = struct {
             while (end > 0 and data[end - 1] == ' ') {
                 end -= 1;
             }
+            if (end > i) {
+                var work = xinline.init(self, out, data[i..end]);
+                try self.renderer.header(out, &work.text_iter, level, id);
+            }
+            return skip;
         }
     };
 
