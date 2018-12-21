@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const Allocator = mem.Allocator;
 const warn = std.debug.warn;
 const assert = std.debug.assert;
 const Buffer = std.Buffer;
@@ -36,6 +37,8 @@ pub const Markdown = struct {
         pub const DefinitionLists: usize = 32768;
         pub const JoinLines: usize = 65536;
     };
+
+    const common_html_flags: usize = 0 | Extension.UseXhtml;
 
     const common_extensions: usize = 0 |
         Extension.NoIntraEmphasis |
@@ -128,8 +131,8 @@ pub const Markdown = struct {
         parse: fn (self: *InlineParser, p: *Parser, out: *Buffer, data: []const u8, offset: usize) anyerror!usize,
     };
 
-    // inline parsers
     emphasis: InlineParser,
+    allocator: *Allocator,
 
     const BaseReference = struct {
         link: []const u8,
@@ -141,16 +144,33 @@ pub const Markdown = struct {
 
     const Parser = struct {
         render: *Renderer,
-        refs: std.AutoHashMap([]const u8, *BaseReference),
+        refs: BaseMap,
         inline_callbacks: [256]?*InlineParser,
         flags: usize,
         nesting: usize,
         max_nesting: usize,
         inside_link: bool,
-        allocator: *mem.Allocator,
-        notes: std.ArrayList(*BaseReference),
-        notes_record: std.AutoHashMap([]const u8, bool),
+        allocator: *Allocator,
+        notes: ?RefList,
+        notes_record: ?BoolMap,
 
+        const BaseMap = std.AutoHashMap([]const u8, *BaseReference);
+        const BoolMap = std.AutoHashMap([]const u8, bool);
+        const RefList = std.ArrayList(*BaseReference);
+
+        fn init(a: *Allocator, r: *Renderer, flags: usize) Parser {
+            var p: Parser = undefined;
+            p.allocator = a;
+            p.renderer = r;
+            p.refs = BaseMap.init(a);
+            p.flags = flags;
+            p.max_nesting = 16;
+            p.inside_link = false;
+            if (flags & Extension.Footnotes != 0) {
+                p.notes = RefList.init(a);
+                p.notes_record = BoolMap.init(a);
+            }
+        }
         // newBaseReference is ahelper for creating a *BaseReference object.
         fn newBaseReference(self: *Parser) anyerror!*BaseReference {
             return self.allocator.createOne(BaseReference);
@@ -311,6 +331,11 @@ pub const Markdown = struct {
         extensions: usize,
         ref_overid: ?*RefOverid,
     };
+
+    fn renderWithOptions(self: *Markdown, out: *Buffer, r: *Renderer, data: []const u8, flags: usize) !void {
+        var p = &Parser.init(self.allocator, &h.renderer, flags);
+        defer p.deinit();
+    }
 };
 
 // Util are utility/helper functions.
