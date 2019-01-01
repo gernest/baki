@@ -27,6 +27,10 @@ const Lexer = struct {
         return lx;
     }
 
+    fn deinit(self: *Lexer) void {
+        self.lexme_list.deinit();
+    }
+
     fn next(self: *Lexer) !?u32 {
         if (self.current_pos >= self.input.len) {
             return null;
@@ -130,6 +134,7 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
+
         fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
             while (try lx.peek()) |r| {
                 switch (r) {
@@ -207,5 +212,6 @@ const Lexer = struct {
 const suite = @import("test_suite.zig");
 test "Lexer" {
     var lx = &Lexer.init(std.debug.global_allocator);
+    defer lx.deinit();
     try lx.run();
 }
