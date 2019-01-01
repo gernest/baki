@@ -12,6 +12,8 @@ const Lexer = struct {
     /// start_pos index on the current token starting point in the input stream
     start_pos: usize,
 
+    width: usize,
+
     /// position of the last emitted token.
     last_pos: ?Position,
 
@@ -31,7 +33,8 @@ const Lexer = struct {
         }
         const c = try unicode.utf8Decode(self.input[self.current_pos..]);
         const width = try unicode.utf8CodepointSequenceLength(c);
-        self.current_pos += @intCast(usize, width);
+        self.width = @intCast(usize, width);
+        self.current_pos += self.width;
         return c;
     }
 
