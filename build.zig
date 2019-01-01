@@ -3,7 +3,7 @@ const Builder = @import("std").build.Builder;
 pub fn build(b: *Builder) void {
     const mode = b.standardReleaseOptions();
 
-    var main_tests = b.addTest("src/markdown.zig");
+    var main_tests = b.addTest("src/baki.zig");
     main_tests.addPackagePath("zunicode", "lib/zunicode/src/index.zig");
     main_tests.setBuildMode(mode);
 

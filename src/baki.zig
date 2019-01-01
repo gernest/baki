@@ -1,4 +1,6 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
+const unicode = std.unicode;
 
 const Lexer = struct {
     input: []const u8,
@@ -14,23 +16,37 @@ const Lexer = struct {
     last_pos: ?Position,
 
     lexme_list: LexMeList,
+    allocator: *Allocator,
 
-    // returns the next character. This doesn't support utf8 yet.
-    //
-    // TODO: support utf8
-    fn next(self: *Lexer) ?u8 {
+    fn init(allocator: *Allocator) Lexer {
+        var lx: Lexer = undefined;
+        lx.allocator = allocator;
+        lx.lexme_list = LexMeList.init(allocator);
+        return lx;
+    }
+
+    fn next(self: *Lexer) !?u32 {
         if (lself.current_pos >= self.input.len) {
             return null;
         }
-        self.current_pos += 1;
-        return self.input[self.current_pos];
+        const c = try unicode.utf8Decode(self.input[self.current_pos..]);
+        const width = try unicode.utf8CodepointSequenceLength(c);
+        self.current_pos += @intCast(usize, width);
+        return c;
+    }
+
+    fn run(self: *Lexer) void {
+        self.state = lex_any;
+        while (self.state) |state| {
+            self.state = state.lex(self);
+        }
     }
 
     const lexState = struct {
         lexFn: fn (lx: *lexState, lexer: *Lexer) ?*lexState,
 
         fn lex(self: *lexState, lx: *Lexer) ?*lexState {
-            return self.lexFn(lx);
+            return self.lexFn(self, lx);
         }
     };
 
@@ -101,7 +117,9 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {
+            return null;
+        }
     };
 
     const HeadingLexer = struct {
@@ -154,3 +172,9 @@ const Lexer = struct {
         fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
     };
 };
+
+const suite = @import("test_suite.zig");
+test "Lexer" {
+    var lx = &Lexer.init(std.debug.global_allocator);
+    lx.run();
+}
