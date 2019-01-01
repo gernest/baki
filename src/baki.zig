@@ -80,7 +80,7 @@ const Lexer = struct {
             BlockQuote,
             List,
             ListItem,
-            CodeBlock,
+            FencedCodeBlock,
             Hr, // horizontal rule
             Table,
             LpTable,
@@ -126,6 +126,10 @@ const Lexer = struct {
     const lex_code_block = &CodeBlockLexer.init().state;
     const lex_text = &TextLexer.init().state;
     const lex_html = &HTMLLexer.init().state;
+    const lex_list = &ListLexer.init().state;
+    const lex_block_quote = &BlockQuoteLexer.init().state;
+    const lex_def_link = &DefLinkLexer.init().state;
+    const lex_fenced_code_block = &FencedCodeBlockLexer.init().state;
 
     const AnyLexer = struct {
         state: lexState,
@@ -138,6 +142,24 @@ const Lexer = struct {
         fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
             while (try lx.peek()) |r| {
                 switch (r) {
+                    '*', '-', '_' => {
+                        return lex_horizontal_rule;
+                    },
+                    '+', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => {
+                        return lex_list;
+                    },
+                    '<' => {
+                        return lex_html;
+                    },
+                    '>' => {
+                        return lex_block_quote;
+                    },
+                    '[' => {
+                        return lex_def_link;
+                    },
+                    '`', '~' => {
+                        return lex_fenced_code_block;
+                    },
                     '#' => {
                         return lex_heading;
                     },
@@ -162,7 +184,7 @@ const Lexer = struct {
 
     const HorizontalRuleLexer = struct {
         state: lexState,
-        fn init() HeadingLexer {
+        fn init() HorizontalRuleLexer {
             return HorizontalRuleLexer{
                 .state = lexState{ .lexFn = lexFn },
             };
@@ -174,7 +196,7 @@ const Lexer = struct {
 
     const CodeBlockLexer = struct {
         state: lexState,
-        fn init() HeadingLexer {
+        fn init() CodeBlockLexer {
             return CodeBlockLexer{
                 .state = lexState{ .lexFn = lexFn },
             };
@@ -186,7 +208,7 @@ const Lexer = struct {
 
     const TextLexer = struct {
         state: lexState,
-        fn init() HeadingLexer {
+        fn init() TextLexer {
             return TextLexer{
                 .state = lexState{ .lexFn = lexFn },
             };
@@ -198,8 +220,56 @@ const Lexer = struct {
 
     const HTMLLexer = struct {
         state: lexState,
-        fn init() HeadingLexer {
+        fn init() HTMLLexer {
             return HTMLLexer{
+                .state = lexState{ .lexFn = lexFn },
+            };
+        }
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
+    };
+
+    const ListLexer = struct {
+        state: lexState,
+        fn init() ListLexer {
+            return ListLexer{
+                .state = lexState{ .lexFn = lexFn },
+            };
+        }
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
+    };
+
+    const BlockQuoteLexer = struct {
+        state: lexState,
+        fn init() BlockQuoteLexer {
+            return BlockQuoteLexer{
+                .state = lexState{ .lexFn = lexFn },
+            };
+        }
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
+    };
+
+    const DefLinkLexer = struct {
+        state: lexState,
+        fn init() DefLinkLexer {
+            return DefLinkLexer{
+                .state = lexState{ .lexFn = lexFn },
+            };
+        }
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
+    };
+
+    const FencedCodeBlockLexer = struct {
+        state: lexState,
+        fn init() FencedCodeBlockLexer {
+            return FencedCodeBlockLexer{
                 .state = lexState{ .lexFn = lexFn },
             };
         }
