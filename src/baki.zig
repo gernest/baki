@@ -38,6 +38,16 @@ const Lexer = struct {
         return c;
     }
 
+    fn backup(self: *Lexer) void {
+        self.current_pos -= self.width;
+    }
+
+    fn peek(self: *Lexer) !?u32 {
+        const r = try self.next();
+        self.backup();
+        return r;
+    }
+
     fn run(self: *Lexer) void {
         self.state = lex_any;
         while (self.state) |state| {
