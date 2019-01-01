@@ -28,7 +28,7 @@ const Lexer = struct {
     }
 
     fn next(self: *Lexer) !?u32 {
-        if (lself.current_pos >= self.input.len) {
+        if (self.current_pos >= self.input.len) {
             return null;
         }
         const c = try unicode.utf8Decode(self.input[self.current_pos..]);
@@ -48,17 +48,17 @@ const Lexer = struct {
         return r;
     }
 
-    fn run(self: *Lexer) void {
+    fn run(self: *Lexer) !void {
         self.state = lex_any;
         while (self.state) |state| {
-            self.state = state.lex(self);
+            self.state = try state.lex(self);
         }
     }
 
     const lexState = struct {
-        lexFn: fn (lx: *lexState, lexer: *Lexer) ?*lexState,
+        lexFn: fn (lx: *lexState, lexer: *Lexer) anyerror!?*lexState,
 
-        fn lex(self: *lexState, lx: *Lexer) ?*lexState {
+        fn lex(self: *lexState, lx: *Lexer) !?*lexState {
             return self.lexFn(self, lx);
         }
     };
@@ -130,7 +130,15 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            while (try lx.peek()) |r| {
+                switch (r) {
+                    '#' => {
+                        return lex_heading;
+                    },
+                    else => {},
+                }
+            }
             return null;
         }
     };
@@ -142,7 +150,9 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
     };
 
     const HorizontalRuleLexer = struct {
@@ -152,7 +162,9 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
     };
 
     const CodeBlockLexer = struct {
@@ -162,7 +174,9 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
     };
 
     const TextLexer = struct {
@@ -172,7 +186,9 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
     };
 
     const HTMLLexer = struct {
@@ -182,12 +198,14 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) ?*lexState {}
+        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
+            return error.TODO;
+        }
     };
 };
 
 const suite = @import("test_suite.zig");
 test "Lexer" {
     var lx = &Lexer.init(std.debug.global_allocator);
-    lx.run();
+    try lx.run();
 }
