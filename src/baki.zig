@@ -188,8 +188,8 @@ const Lexer = struct {
     // the offset of the heading relative to the beginning of the in where the
     // setext block ends.
     //
-    // The offset includes the - or == sequence line up to its line ending.
-    fn findSetextHeading(in: []const u8) ?usize {
+    // The position includes the - or == sequence line up to its line ending.
+    fn findSetextHeading(in: []const u8) ?Position {
         if (in.len == 0) {
             return null;
         }
@@ -197,52 +197,66 @@ const Lexer = struct {
             var count_new_lines: usize = 0;
             var last_line_index: usize = 0;
             var i: usize = 0;
-            while (i < idx) : (i += 1) {
-                const c = in[i];
-                if (c == '\n') {
-                    count_new_lines += 1;
-
-                    // all lines must have not more than 3 space indentation and
-                    // should. contain at least one non whitespace character.
-                    var j: usize = last_line_index;
-                    const indent_size = Util.indentation(in[j..]);
-                    if (indent_size > 3) {
-                        return null;
-                    }
-                    var valid = false;
-                    while (j < i) {
-                        if (!Util.isSpace(in[j])) {
-                            valid = true;
-                            break;
-                        }
-                    }
-                    if (!valid) {
-                        return null;
-                    }
-                    last_line_index = i;
+            var iter = &IterLine.init(in, 0, idx + 1);
+            var line_pos: Position = undefined;
+            while (iter.next()) |pos| {
+                count_new_lines += 1;
+                line_pos = pos;
+                const indent = Util.indentation(in[pos.begin..pos.end]);
+                if (indent > 3) {
+                    return null;
                 }
-                i += 1;
             }
+
             if (count_new_lines == 0) {
                 // We save the trouble of keeping going because a setext must be
                 // in one or more lines folowwed by the setext line sequence.
                 return null;
             }
-            warn("new lines:{}\n", count_new_lines);
-
-            // quicly verify the setext sequence is correct before further
-            // checks. This should begin with not more than 3 character space
-            // indent followwed by 2 or more setext sequence and any number of
-            // white stapec.
+            // The last line is the one containing the setext sequence char - or
+            // =
+            var active_char: ?u8 = undefined;
+            var space_zone = false;
+            const setext = in[line_pos.begin..line_pos.end];
+            const indent = Util.indentation(setext);
+            for (setext[indent..]) |c| {
+                switch (c) {
+                    '-', '=' => {
+                        if (space_zone) {
+                            return null;
+                        }
+                        if (active_char) |char| {
+                            if (char != c) {
+                                return null;
+                            }
+                            continue;
+                        }
+                        active_char = c;
+                    },
+                    else => {
+                        if (Util.isSpace(c)) {
+                            if (!space_zone) {
+                                space_zone = true;
+                            }
+                        } else {
+                            return null;
+                        }
+                    },
+                }
+            }
+            return Position{
+                .begin = 0,
+                .end = line_pos.end,
+            };
         }
         return null;
     }
 
     fn findSetextSequence(in: []const u8) ?usize {
-        if (Util.index(in, "==")) |idx| {
+        if (Util.index(in, "=")) |idx| {
             return idx;
         }
-        return Util.index(in, "--");
+        return Util.index(in, "-");
     }
 
     const lex_any = &AnyLexer.init().state;
@@ -643,8 +657,8 @@ test "Lexer.findSetextHeading" {
     };
 
     for (cases) |case| {
-        // const idx = Lexer.findSetextHeading(case.in);
-        // warn(":  index {}\n", idx);
+        const idx = Lexer.findSetextHeading(case.in);
+        warn("{}\n", idx);
     }
 }
 
