@@ -114,6 +114,64 @@ const Lexer = struct {
         end: usize,
     };
 
+    const IterLine = struct {
+        src: []const u8,
+        current_pos: usize,
+
+        // this says when to stop looking for a next new line. When null the end
+        // of input will be used instead.
+        limit: ?usize,
+
+        fn init(src: []const u8, current_pos: usize, limit: ?usize) IterLine {
+            return IterLine{
+                .src = src,
+                .current_pos = current_pos,
+                .limit = limit,
+            };
+        }
+
+        fn next(self: *IterLine) ?Position {
+            if (self.limit != null and self.current_pos >= self.limit.?) {
+                return null;
+            }
+            var limit: usize = self.src.len;
+            if (self.limit) |v| {
+                limit = v;
+            }
+            if (Util.index(self.src[self.current_pos..], "\n")) |idx| {
+                if (self.current_pos + idx > limit) {
+                    // We employ limit here as relative to where the last line
+                    // might be.
+                    //
+                    // This case here the limiting index is inside the text that
+                    // ends with a new line so we disqualify the whole line. To
+                    // ensure that we wont waste time for next calls we progress
+                    // the cursor so no further checks will be performed.
+                    self.current_pos += idx;
+                    return null;
+                }
+                const c = self.current_pos;
+                // we are including the new line character as we want to
+                // preserve originality.
+                self.current_pos += idx + 1;
+                return Position{
+                    .begin = c,
+                    .end = self.current_pos,
+                };
+            }
+            if (limit <= self.src.len) {
+                // yield the rest of the input;
+                const c = self.current_pos;
+                self.current_pos = self.src.len;
+                return Position{
+                    .begin = c,
+                    .end = self.current_pos,
+                };
+            }
+            return null;
+        }
+    };
+
     fn emit(self: *Lexer, id: LexMe.Id) !void {
         var a = &self.lexme_list;
         try a.append(LexMe{
@@ -585,7 +643,51 @@ test "Lexer.findSetextHeading" {
     };
 
     for (cases) |case| {
-        const idx = Lexer.findSetextHeading(case.in);
-        warn(":  index {}\n", idx);
+        // const idx = Lexer.findSetextHeading(case.in);
+        // warn(":  index {}\n", idx);
+    }
+}
+
+test "IterLine" {
+    const TestCase = struct {
+        const Self = @This();
+        in: []const u8,
+        start_pos: usize,
+        limit: ?usize,
+        begin: usize,
+        end: usize,
+        fn init(in: []const u8, start_pos: usize, limit: ?usize, begin: usize, end: usize) Self {
+            return Self{
+                .in = in,
+                .start_pos = start_pos,
+                .limit = limit,
+                .begin = begin,
+                .end = end,
+            };
+        }
+    };
+    const new_case = TestCase.init;
+    const cases = []TestCase{
+        // plain line
+        new_case("abc", 0, null, 0, 3),
+        // ,ust include the new line character
+        new_case("abc\ndef", 0, null, 0, 4),
+        new_case("abc\ndef", 5, 6, 5, 7),
+    };
+    for (cases) |case| {
+        var iter = &Lexer.IterLine.init(case.in, case.start_pos, case.limit);
+        if (iter.next()) |pos| {
+            const expect_pos = Lexer.Position{ .begin = case.begin, .end = case.end };
+            if (pos.begin != expect_pos.begin or pos.end != expect_pos.end) {
+                warn("case : {} expected position {} got {}\n", case, expect_pos, pos);
+                return error.WrongPosition;
+            }
+        } else {
+            if (!(case.begin == 0 and case.end == 0)) {
+                const pos = Lexer.Position{ .begin = case.begin, .end = case.end };
+                warn("case: {} expcedted position:{} got null\n", case, pos);
+                return error.PositionMustNotBeNull;
+            }
+        }
     }
 }
