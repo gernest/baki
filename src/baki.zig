@@ -177,11 +177,11 @@ const Lexer = struct {
         try a.append(LexMe{
             .id = id,
             .pos = Position{
-                .begin = self.start,
+                .begin = self.start_pos,
                 .end = self.current_pos,
             },
         });
-        self.start = self.current_pos;
+        self.start_pos = self.current_pos;
     }
 
     // findSetextHeading checks if in is begins with a setext heading. Returns
@@ -215,7 +215,7 @@ const Lexer = struct {
             }
             // The last line is the one containing the setext sequence char - or
             // =
-            var active_char: ?u8 = undefined;
+            var active_char: ?u8 = null;
             var space_zone = false;
             const setext = in[line_pos.begin..line_pos.end];
             const indent = Util.indentation(setext);
@@ -234,7 +234,7 @@ const Lexer = struct {
                         active_char = c;
                     },
                     else => {
-                        if (Util.isSpace(c)) {
+                        if (Util.isHorizontalSpace(c)) {
                             if (!space_zone) {
                                 space_zone = true;
                             }
@@ -257,6 +257,56 @@ const Lexer = struct {
             return idx;
         }
         return Util.index(in, "-");
+    }
+
+    // returns position for Thematic breaks
+    //
+    // see https://github.github.com/gfm/#thematic-breaks
+    fn findHorizontalRules(in: []const u8) ?Position {
+        const indent = Util.indentation(in);
+        if (indent > 3) {
+            return null;
+        }
+        var index = in.len;
+        if (Util.index(in, "\n")) |idx| {
+            index = idx;
+        }
+        const hr_prospect = in[indent..index];
+        var active_char: ?u8 = null;
+        var space_zone = false;
+        for (hr_prospect) |c| {
+            switch (c) {
+                '-', '_', '*' => {
+                    if (space_zone) {
+                        return null;
+                    }
+                    if (active_char) |char| {
+                        if (char != c) {
+                            return null;
+                        }
+                    }
+                },
+                else => {
+                    if (Util.isHorizontalSpace(c)) {
+                        if (!space_zone) {
+                            space_zone = true;
+                        }
+                    } else {
+                        return null;
+                    }
+                },
+            }
+        }
+        var o: usize = 0;
+        if (index == in.len) {
+            o = index;
+        } else {
+            o = index + 1;
+        }
+        return Position{
+            .begin = 0,
+            .end = o,
+        };
     }
 
     const lex_any = &AnyLexer.init().state;
@@ -328,8 +378,13 @@ const Lexer = struct {
                 .state = lexState{ .lexFn = lexFn },
             };
         }
-        fn lexFn(self: *lexState, lx: *Lexer) !?*lexState {
-            return error.TODO;
+        fn lexFn(self: *lexState, lx: *Lexer) anyerror!?*lexState {
+            if (findHorizontalRules(lx.input[lx.current_pos..])) |pos| {
+                lx.current_pos += pos.end;
+                try lx.emit(LexMe.Id.Hr);
+                return lex_any;
+            }
+            return lex_list;
         }
     };
 
