@@ -1,6 +1,4 @@
 pub const TestCase = struct {
-    start_line: u32,
-    end_line: u32,
     example: u32,
     sec: []const u8,
     html: []const u8,

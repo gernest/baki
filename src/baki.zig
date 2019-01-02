@@ -1,6 +1,12 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const unicode = std.unicode;
+const warn = std.debug.warn;
+const mem = std.mem;
+
+const form_feed = 0x0C;
+const line_tabulation = 0x0B;
+const space = ' ';
 
 const Lexer = struct {
     input: []const u8,
@@ -118,6 +124,67 @@ const Lexer = struct {
             },
         });
         self.start = self.current_pos;
+    }
+
+    // findSetextHeading checks if in is begins with a setext heading. Returns
+    // the offset of the heading relative to the beginning of the in where the
+    // setext block ends.
+    //
+    // The offset includes the - or == sequence line up to its line ending.
+    fn findSetextHeading(in: []const u8) ?usize {
+        if (in.len == 0) {
+            return null;
+        }
+        if (findSetextSequence(in)) |idx| {
+            var count_new_lines: usize = 0;
+            var last_line_index: usize = 0;
+            var i: usize = 0;
+            while (i < idx) : (i += 1) {
+                const c = in[i];
+                if (c == '\n') {
+                    count_new_lines += 1;
+
+                    // all lines must have not more than 3 space indentation and
+                    // should. contain at least one non whitespace character.
+                    var j: usize = last_line_index;
+                    const indent_size = Util.indentation(in[j..]);
+                    if (indent_size > 3) {
+                        return null;
+                    }
+                    var valid = false;
+                    while (j < i) {
+                        if (!Util.isSpace(in[j])) {
+                            valid = true;
+                            break;
+                        }
+                    }
+                    if (!valid) {
+                        return null;
+                    }
+                    last_line_index = i;
+                }
+                i += 1;
+            }
+            if (count_new_lines == 0) {
+                // We save the trouble of keeping going because a setext must be
+                // in one or more lines folowwed by the setext line sequence.
+                return null;
+            }
+            warn("new lines:{}\n", count_new_lines);
+
+            // quicly verify the setext sequence is correct before further
+            // checks. This should begin with not more than 3 character space
+            // indent followwed by 2 or more setext sequence and any number of
+            // white stapec.
+        }
+        return null;
+    }
+
+    fn findSetextSequence(in: []const u8) ?usize {
+        if (Util.index(in, "==")) |idx| {
+            return idx;
+        }
+        return Util.index(in, "--");
     }
 
     const lex_any = &AnyLexer.init().state;
@@ -298,13 +365,6 @@ const Lexer = struct {
     };
 };
 
-const suite = @import("test_suite.zig");
-test "Lexer" {
-    var lx = &Lexer.init(std.debug.global_allocator);
-    defer lx.deinit();
-    try lx.run();
-}
-
 // Util are utility/helper functions.
 const Util = struct {
     const punct_marks = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
@@ -367,9 +427,32 @@ const Util = struct {
         return indent_size;
     }
 
+    fn indentation(data: []const u8) usize {
+        if (data.len == 0) {
+            return 0;
+        }
+        if (data[0] == '\t') {
+            return 1;
+        }
+
+        var i: usize = 0;
+        var idx: usize = 0;
+        while (i < data.len) : (i += 1) {
+            if (data[i] != ' ') {
+                break;
+            }
+            idx += 1;
+        }
+        return idx;
+    }
+
     /// returns true if sub_slice is within s.
     pub fn contains(s: []const u8, sub_slice: []const u8) bool {
         return mem.indexOf(u8, s, sub_slice) != null;
+    }
+
+    pub fn index(s: []const u8, sub_slice: []const u8) ?usize {
+        return mem.indexOf(u8, s, sub_slice);
     }
 
     /// hasPrefix returns true if slice s begins with prefix.
@@ -426,3 +509,83 @@ const Util = struct {
         return false;
     }
 };
+
+const suite = @import("test_suite.zig");
+test "Lexer" {
+    var lx = &Lexer.init(std.debug.global_allocator);
+    defer lx.deinit();
+    try lx.run();
+}
+
+test "Lexer.findSetextHeading" {
+    const TestCase = struct {
+        const Self = @This();
+        in: []const u8,
+        offset: ?usize,
+        fn init(in: []const u8, offset: ?usize) Self {
+            return Self{ .in = in, .offset = offset };
+        }
+    };
+    const new_case = TestCase.init;
+
+    const cases = []TestCase{
+        new_case(
+            \\Foo *bar*
+            \\=========
+        , null),
+        // The content of the header may span more than one line
+        new_case(
+            \\Foo *bar
+            \\baz*
+            \\====
+        , null),
+        new_case(
+            \\Foo *bar
+            \\baz*
+            \\====
+        , null),
+        // The underlining can be any length:
+        new_case(
+            \\Foo
+            \\-------------------------
+        , null),
+        new_case(
+            \\Foo
+            \\=
+        , null),
+        // The heading content can be indented up to three spaces, and need not
+        // line up with the underlining.
+        new_case(
+            \\   Foo
+            \\---
+        , null),
+        new_case(
+            \\  Foo
+            \\-----
+        , null),
+        new_case(
+            \\  Foo
+            \\  ===
+        , null),
+        // Four spaces indent is too much.
+        new_case(
+            \\    Foo
+            \\    ---
+        , null),
+        new_case(
+            \\    Foo
+            \\---
+        , null),
+        // The setext heading underline can be indented up to three spaces, and
+        // may have trailing spaces.
+        new_case(
+            \\Foo
+            \\   ----      
+        , null),
+    };
+
+    for (cases) |case| {
+        const idx = Lexer.findSetextHeading(case.in);
+        warn(":  index {}\n", idx);
+    }
+}
