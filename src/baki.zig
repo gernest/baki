@@ -358,7 +358,7 @@ const Lexer = struct {
             while (try lx.peek()) |r| {
                 switch (r) {
                     '\n' => {
-                        if (ls.current_pos > ls.start_pos and Util.hasPrefix(lx.input[lx.current_pos + 1 ..], "    ")) {
+                        if (lx.current_pos > lx.start_pos and Util.hasPrefix(lx.input[lx.current_pos + 1 ..], "    ")) {
                             _ = try lx.next();
                             continue;
                         }
@@ -369,7 +369,14 @@ const Lexer = struct {
                         try lx.emit(LexMe.NewLine);
                         break;
                     },
-                    else => {},
+                    else => {
+                        if (findSetextHeading(lx.input[lx.current_pos..])) |pos| {
+                            lx.current_pos += pos.end;
+                            try lx.emit(LexMe.Heading);
+                            break;
+                        }
+                        _ = try lx.next();
+                    },
                 }
             }
             return lex_any;
