@@ -8,6 +8,11 @@ const form_feed = 0x0C;
 const line_tabulation = 0x0B;
 const space = ' ';
 
+const Position = struct {
+    begin: usize,
+    end: usize,
+};
+
 const Lexer = struct {
     input: []const u8,
     state: ?*lexState,
@@ -107,11 +112,6 @@ const Lexer = struct {
             Pipe,
             Indent,
         };
-    };
-
-    const Position = struct {
-        begin: usize,
-        end: usize,
     };
 
     const IterLine = struct {
@@ -866,17 +866,153 @@ test "IterLine" {
     for (cases) |case| {
         var iter = &Lexer.IterLine.init(case.in, case.start_pos, case.limit);
         if (iter.next()) |pos| {
-            const expect_pos = Lexer.Position{ .begin = case.begin, .end = case.end };
+            const expect_pos = Position{ .begin = case.begin, .end = case.end };
             if (pos.begin != expect_pos.begin or pos.end != expect_pos.end) {
                 warn("case : {} expected position {} got {}\n", case, expect_pos, pos);
                 return error.WrongPosition;
             }
         } else {
             if (!(case.begin == 0 and case.end == 0)) {
-                const pos = Lexer.Position{ .begin = case.begin, .end = case.end };
+                const pos = Position{ .begin = case.begin, .end = case.end };
                 warn("case: {} expcedted position:{} got null\n", case, pos);
                 return error.PositionMustNotBeNull;
             }
         }
     }
 }
+
+const Parser = struct {
+    const Node = struct {
+        id: Id,
+        const Id = enum {
+            Text, // A plain text
+            Paragraph, // A Paragraph
+            Emphasis, // An emphasis(strong, em, ...)
+            Heading, // A heading (h1, h2, ...)
+            Br, // A link break
+            Hr, // A horizontal rule
+            Image, // An image
+            RefImage, // A image reference
+            List, // A list of ListItems
+            ListItem, // A list item node
+            Link, // A link(href)
+            RefLink, // A link reference
+            DefLink, // A link definition
+            Table, // A table of Rows
+            Row, // A row of Cells
+            Cell, // A table-cell(td)
+            Code, // A code block(wrapped with pre)
+            BlockQuote, // A blockquote
+            HTML, // An inline HTML
+        };
+        const NodeList = ArrayList(*Node);
+
+        fn NodeBase(base: type) type {
+            return struct {
+                id: Id,
+                base: base,
+            };
+        }
+
+        const Paragraph = struct {
+            const Self = @This();
+            pos: Position,
+            nodes: ?NodeList,
+            const Context = NodeBase(Self);
+
+            fn init(pos: Position, nodes: ?NodeList) Context {
+                return Context{
+                    .id = Id.Paragraph,
+                    .base = Self{
+                        .pos = pos,
+                        .nodes = nodes,
+                    },
+                };
+            }
+        };
+
+        const Text = struct {
+            const Self = @This();
+            pos: Position,
+            const Context = NodeBase(Self);
+            fn init(pos: Position) Context {
+                return Context{
+                    .id = Id.Text,
+                    .base = Self{ .pos = pos },
+                };
+            }
+        };
+
+        const HTML = struct {
+            const Self = @This();
+            pos: Position,
+            const Context = NodeBase(Self);
+            fn init(pos: Position) Context {
+                return Context{
+                    .id = Id.HTML,
+                    .base = Self{ .pos = pos },
+                };
+            }
+        };
+
+        const HR = struct {
+            const Self = @This();
+            pos: Position,
+            const Context = NodeBase(Self);
+            fn init(pos: Position) Context {
+                return Context{
+                    .id = Id.Br,
+                    .base = Self{ .pos = pos },
+                };
+            }
+        };
+
+        const BR = struct {
+            const Self = @This();
+            pos: Position,
+            const Context = NodeBase(Self);
+            fn init(pos: Position) Context {
+                return Context{
+                    .id = Id.Hr,
+                    .base = Self{ .pos = pos },
+                };
+            }
+        };
+
+        const Emphasis = struct {
+            const Self = @This();
+            pos: Position,
+            style: Lexer.LexMe,
+            nodes: ?NodeList,
+            const Context = NodeBase(Self);
+            fn init(pos: Position, style: Lexer.LexMe, nodes: ?NodeList) Context {
+                return Context{
+                    .id = Id.Emphasis,
+                    .base = Self{
+                        .pos = pos,
+                        .style = style,
+                        .nodes = nodes,
+                    },
+                };
+            }
+        };
+
+        const Heading = struct {
+            const Self = @This();
+            pos: Position,
+            levels: usize, //(0.6)
+            nodes: ?NodeList,
+            const Context = NodeBase(Self);
+            fn init(pos: Position, levels: usize, nodes: ?NodeList) Context {
+                return Context{
+                    .id = Id.Heading,
+                    .base = Self{
+                        .pos = pos,
+                        .levels = levels,
+                        .nodes = nodes,
+                    },
+                };
+            }
+        };
+    };
+};
