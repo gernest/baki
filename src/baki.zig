@@ -260,7 +260,7 @@ const Lexer = struct {
     // returns position for Thematic breaks
     //
     // see https://github.github.com/gfm/#thematic-breaks
-    fn findHorizontalRules(in: []const u8) ?Position {
+    fn findHorizontalRules(in: []const u8) ?usize {
         const indent = Util.indentation(in);
         if (indent > 3) {
             return null;
@@ -301,10 +301,7 @@ const Lexer = struct {
         } else {
             o = index + 1;
         }
-        return Position{
-            .begin = 0,
-            .end = o,
-        };
+        return o;
     }
 
     const fenced_tilde_prefix = [][]const u8{
@@ -318,7 +315,7 @@ const Lexer = struct {
     // returns position for Fenced code blocks
     //
     // see https://github.github.com/gfm/#fenced-code-blocks
-    fn findFencedCodeBlock(in: []const u8) ?Position {
+    fn findFencedCodeBlock(in: []const u8) ?usize {
         const indent = Util.indentation(in);
         const block = in[indent..];
         var fenced_char = block[0];
@@ -388,10 +385,7 @@ const Lexer = struct {
                     }
                     return null;
                 }
-                return Position{
-                    .begin = 0,
-                    .end = j,
-                };
+                return j;
             }
         }
         return null;
@@ -468,7 +462,7 @@ const Lexer = struct {
         }
         fn lexFn(self: *lexState, lx: *Lexer) anyerror!?*lexState {
             if (findHorizontalRules(lx.input[lx.current_pos..])) |pos| {
-                lx.current_pos += pos.end;
+                lx.current_pos += pos;
                 try lx.emit(LexMe.Id.Hr);
                 return lex_any;
             }
