@@ -905,6 +905,7 @@ const Parser = struct {
             BlockQuote, // A blockquote
             HTML, // An inline HTML
         };
+
         const NodeList = ArrayList(*Node);
 
         fn NodeBase(base: type) type {
@@ -946,7 +947,9 @@ const Parser = struct {
         const HTML = struct {
             const Self = @This();
             pos: Position,
+
             const Context = NodeBase(Self);
+
             fn init(pos: Position) Context {
                 return Context{
                     .id = Id.HTML,
@@ -984,7 +987,9 @@ const Parser = struct {
             pos: Position,
             style: Lexer.LexMe,
             nodes: ?NodeList,
+
             const Context = NodeBase(Self);
+
             fn init(pos: Position, style: Lexer.LexMe, nodes: ?NodeList) Context {
                 return Context{
                     .id = Id.Emphasis,
@@ -1001,14 +1006,59 @@ const Parser = struct {
             const Self = @This();
             pos: Position,
             levels: usize, //(0.6)
+            text: Position,
             nodes: ?NodeList,
+
             const Context = NodeBase(Self);
-            fn init(pos: Position, levels: usize, nodes: ?NodeList) Context {
+
+            fn init(pos: Position, levels: usize, text: Position, nodes: ?NodeList) Context {
                 return Context{
                     .id = Id.Heading,
                     .base = Self{
                         .pos = pos,
                         .levels = levels,
+                        .text = text,
+                        .nodes = nodes,
+                    },
+                };
+            }
+        };
+
+        const Code = struct {
+            const Self = @This();
+            pos: Position,
+            lang: ?Position,
+            text: Position,
+
+            const Context = NodeBase(Self);
+
+            fn init(pos: Position, levels: usize, text: Position) Context {
+                return Context{
+                    .id = Id.Code,
+                    .base = Self{
+                        .pos = pos,
+                        .text = text,
+                    },
+                };
+            }
+        };
+
+        const Link = struct {
+            const Self = @This();
+            pos: Position,
+            title: ?Position,
+            href: ?Position,
+            nodes: ?NodeList,
+
+            const Context = NodeBase(Self);
+
+            fn init(pos: Position, title: ?Position, href: ?Position, nodes: ?NodeList) Context {
+                return Context{
+                    .id = Id.Link,
+                    .base = Self{
+                        .pos = pos,
+                        .title = title,
+                        .href = href,
                         .nodes = nodes,
                     },
                 };
