@@ -1,3 +1,1 @@
-# zmark
-
-Markdown processor for zig.
+*markdown* for zig.
