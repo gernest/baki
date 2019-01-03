@@ -188,8 +188,9 @@ const Lexer = struct {
     // the offset of the heading relative to the beginning of the in where the
     // setext block ends.
     //
-    // The position includes the - or == sequence line up to its line ending.
-    fn findSetextHeading(in: []const u8) ?Position {
+    // The returned offset includes the - or == sequence line up to and
+    // including its line ending.
+    fn findSetextHeading(in: []const u8) ?usize {
         if (in.len == 0) {
             return null;
         }
@@ -244,10 +245,7 @@ const Lexer = struct {
                     },
                 }
             }
-            return Position{
-                .begin = 0,
-                .end = line_pos.end,
-            };
+            return line_pos.end;
         }
         return null;
     }
@@ -516,7 +514,7 @@ const Lexer = struct {
                     },
                     else => {
                         if (findSetextHeading(lx.input[lx.current_pos..])) |pos| {
-                            lx.current_pos += pos.end;
+                            lx.current_pos += end;
                             try lx.emit(LexMe.Heading);
                             break;
                         }
@@ -770,41 +768,41 @@ test "Lexer.findSetextHeading" {
         new_case(
             \\Foo *bar*
             \\=========
-        , null),
+        , 19),
         // The content of the header may span more than one line
         new_case(
             \\Foo *bar
             \\baz*
             \\====
-        , null),
+        , 18),
         new_case(
             \\Foo *bar
             \\baz*
             \\====
-        , null),
+        , 18),
         // The underlining can be any length:
         new_case(
             \\Foo
             \\-------------------------
-        , null),
+        , 29),
         new_case(
             \\Foo
             \\=
-        , null),
+        , 5),
         // The heading content can be indented up to three spaces, and need not
         // line up with the underlining.
         new_case(
             \\   Foo
             \\---
-        , null),
+        , 10),
         new_case(
             \\  Foo
             \\-----
-        , null),
+        , 11),
         new_case(
             \\  Foo
             \\  ===
-        , null),
+        , 11),
         // Four spaces indent is too much.
         new_case(
             \\    Foo
@@ -819,12 +817,29 @@ test "Lexer.findSetextHeading" {
         new_case(
             \\Foo
             \\   ----      
-        , null),
+        , 17),
     };
 
     for (cases) |case| {
         const idx = Lexer.findSetextHeading(case.in);
-        warn("{}\n", idx);
+        // if (idx != null) {
+        //     warn("{} {} {}\n", case.in[0..idx.?], idx, case.in.len);
+        // }
+        if (case.offset) |offset| {
+            if (idx == null) {
+                warn("expected offset {} got null\n", offset);
+                return error.TestFailed;
+            }
+            if (offset != idx.?) {
+                warn("expected offset {} got {}\n", offset, idx);
+                return error.TestFailed;
+            }
+        } else {
+            if (idx != null) {
+                warn("expected offset to be null got {}\n", idx);
+                return error.TestFailed;
+            }
+        }
     }
 }
 
