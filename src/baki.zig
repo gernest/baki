@@ -309,6 +309,96 @@ const Lexer = struct {
         };
     }
 
+    const fenced_tilde_prefix = [][]const u8{
+        "", "", "", "```", "````", "`````", "``````", "```````",
+    };
+
+    const fenced_backtick_prefix = [][]const u8{
+        "", "", "", "~~~", "~~~~", "~~~~~", "~~~~~~", "~~~~~~~",
+    };
+
+    // returns position for Fenced code blocks
+    //
+    // see https://github.github.com/gfm/#fenced-code-blocks
+    fn findFencedCodeBlock(in: []const u8) ?Position {
+        const indent = Util.indentation(in);
+        const block = in[indent..];
+        var fenced_char = block[0];
+        switch (fenced_char) {
+            '`', '~' => {},
+            else => {
+                return null;
+            },
+        }
+        const count = Util.countStartsWith(block, fenced_char);
+        // This is enforced by this library. It is just madness to have seven
+        // backticks just describing a code block
+        if (count < 3 or count > 7) {
+            return null;
+        }
+
+        // checking the info string
+        if (Util.index(in, "\n")) |idx| {
+
+            // we are adding indent here to preserve offsets relative to in
+            // because the position we return are from in stream.
+            var i = indent + count + 1;
+            while (i < idx) {
+                if (in[i] == fenced_char) {
+                    return null;
+                }
+                i += 1;
+            }
+            const closing_index = switch (fenced_char) {
+                '~' => fenced_tilde_prefix[count],
+                '`' => fenced_backtick_prefix[count],
+                else => unreachable,
+            };
+            if (Util.index(in[i..], closing_index)) |idx| {
+
+                // The closing fenced block line may be indented, we are walking
+                // backward to count the amount of indentation
+                var indent_count: usize = 0;
+                var j = idx - 1;
+                while (j > 0) : (j -= 1) {
+                    const c = in[j];
+                    switch (c) {
+                        ' ', '\t' => {
+                            indent_count += 1;
+                        },
+                        else => {
+                            if (Util.isVersicalSpace(c)) {
+                                break;
+                            }
+                            return null;
+                        },
+                    }
+                }
+                if (indent_count > 3) {
+                    return null;
+                }
+                j = idx + closing_index.len;
+                while (j < in.len) : (j += 1) {
+                    // After the closing code block. The line must only contain
+                    // spaces
+                    const c = in[j];
+                    if (Util.isVersicalSpace(c)) {
+                        break;
+                    }
+                    if (Util.isHorizontalSpace(c)) {
+                        continue;
+                    }
+                    return null;
+                }
+                return Position{
+                    .begin = 0,
+                    .end = j,
+                };
+            }
+        }
+        return null;
+    }
+
     const lex_any = &AnyLexer.init().state;
     const lex_heading = &HeadingLexer.init().state;
     const lex_horizontal_rule = &HorizontalRuleLexer.init().state;
@@ -578,6 +668,20 @@ const Util = struct {
             idx += 1;
         }
         return idx;
+    }
+
+    // countStartsWith counts c character occurance from the beginning of data.
+    fn countStartsWith(data: []const u8, c: u8) usize {
+        if (data.len == 0) {
+            return 0;
+        }
+        var i: usize = 0;
+        while (i < data.len) {
+            if (c != data[i]) {
+                break;
+            }
+        }
+        return i;
     }
 
     /// returns true if sub_slice is within s.
