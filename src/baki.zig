@@ -131,6 +131,9 @@ const Lexer = struct {
         }
 
         fn next(self: *IterLine) ?Position {
+            if (self.current_pos >= self.src.len) {
+                return null;
+            }
             if (self.limit != null and self.current_pos >= self.limit.?) {
                 return null;
             }
@@ -151,12 +154,10 @@ const Lexer = struct {
                     return null;
                 }
                 const c = self.current_pos;
-                // we are including the new line character as we want to
-                // preserve originality.
                 self.current_pos += idx + 1;
                 return Position{
                     .begin = c,
-                    .end = self.current_pos,
+                    .end = self.current_pos - 1,
                 };
             }
             if (limit <= self.src.len) {
