@@ -593,6 +593,19 @@ const Util = struct {
         return false;
     }
 
+    // returns true if s is a blank line.
+    fn isBlank(s: []const u8) bool {
+        if (s.len == 0) {
+            return true;
+        }
+        for (s) |c| {
+            if (!isHorizontalSpace(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /// returns true if c is a whitespace character.
     fn isSpace(c: u8) bool {
         return isHorizontalSpace(c) or isVersicalSpace(c);
