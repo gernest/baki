@@ -118,15 +118,10 @@ const Lexer = struct {
         src: []const u8,
         current_pos: usize,
 
-        // this says when to stop looking for a next new line. When null the end
-        // of input will be used instead.
-        limit: ?usize,
-
-        fn init(src: []const u8, current_pos: usize, limit: ?usize) IterLine {
+        fn init(src: []const u8, current_pos: usize) IterLine {
             return IterLine{
                 .src = src,
                 .current_pos = current_pos,
-                .limit = limit,
             };
         }
 
@@ -134,25 +129,7 @@ const Lexer = struct {
             if (self.current_pos >= self.src.len) {
                 return null;
             }
-            if (self.limit != null and self.current_pos >= self.limit.?) {
-                return null;
-            }
-            var limit: usize = self.src.len;
-            if (self.limit) |v| {
-                limit = v;
-            }
             if (Util.index(self.src[self.current_pos..], "\n")) |idx| {
-                if (self.current_pos + idx > limit) {
-                    // We employ limit here as relative to where the last line
-                    // might be.
-                    //
-                    // This case here the limiting index is inside the text that
-                    // ends with a new line so we disqualify the whole line. To
-                    // ensure that we wont waste time for next calls we progress
-                    // the cursor so no further checks will be performed.
-                    self.current_pos += idx;
-                    return null;
-                }
                 const c = self.current_pos;
                 self.current_pos += idx + 1;
                 return Position{
@@ -160,16 +137,17 @@ const Lexer = struct {
                     .end = self.current_pos - 1,
                 };
             }
-            if (limit <= self.src.len) {
-                // yield the rest of the input;
-                const c = self.current_pos;
-                self.current_pos = self.src.len;
-                return Position{
-                    .begin = c,
-                    .end = self.current_pos,
-                };
-            }
-            return null;
+            const c = self.current_pos;
+            self.current_pos = self.src.len;
+            return Position{
+                .begin = c,
+                .end = self.current_pos - 1,
+            };
+        }
+
+        fn reset(self: *IterLine, src: []const u8, pos: usize) void {
+            self.current_pos = pos;
+            self.src = src;
         }
     };
 
@@ -192,50 +170,67 @@ const Lexer = struct {
     // The returned offset includes the - or == sequence line up to and
     // including its line ending.
     fn findSetextHeading(in: []const u8) ?usize {
-        if (in.len == 0) {
+        if (Util.isBlank(in)) {
             return null;
         }
-        if (findSetextSequence(in)) |idx| {
-            var count_new_lines: usize = 0;
-            var last_line_index: usize = 0;
-            var i: usize = 0;
-            var iter = &IterLine.init(in, 0, idx + 1);
-            var line_pos: Position = undefined;
+        // If setext sequence char is at the begininning of input then we
+        // treat it as break.
+        if (in[0] == '-' or in[0] == '=') {
+            return null;
+        }
+        const x = Util.indentation(in);
+        if (x <= 3 and (x + 1 < in.len)) {
+            const c = in[x + 1];
+            if (c == '-' or c == '=') {
+                return null;
+            }
+        }
+
+        if (findSetextSequence(in)) |seq| {
+            const idx = seq.idx;
+            var scratch: [2]?Position = undefined;
+            var iter = &IterLine.init(in[0..idx], 0);
             while (iter.next()) |pos| {
-                count_new_lines += 1;
-                line_pos = pos;
+                const line = in[pos.begin..pos.end];
+                if (Util.isBlank(line)) {
+                    // This can span multiple lines when they don't contain a
+                    // blank line.
+                    scratch[0] = null;
+                    scratch[1] = null;
+                    continue;
+                }
+                if (scratch[0] == null) {
+                    scratch[0] = pos;
+                } else {
+                    scratch[1] = pos;
+                }
                 const indent = Util.indentation(in[pos.begin..pos.end]);
                 if (indent > 3) {
                     return null;
                 }
             }
-
-            if (count_new_lines == 0) {
-                // We save the trouble of keeping going because a setext must be
-                // in one or more lines folowwed by the setext line sequence.
+            if (scratch[0] == null and scratch[1] == null) {
                 return null;
             }
-            // The last line is the one containing the setext sequence char - or
-            // =
-            var active_char: ?u8 = null;
+            iter.reset(in, idx);
+            const pos = iter.next();
+            if (pos == null) {
+                return null;
+            }
+            const line = in[pos.?.begin..pos.?.end];
+
+            // what is left is to verify that line conforms to a valid setext
+            // sequence line.
+
             var space_zone = false;
-            const setext = in[line_pos.begin..line_pos.end];
-            const indent = Util.indentation(setext);
-            for (setext[indent..]) |c| {
-                switch (c) {
-                    '-', '=' => {
-                        if (space_zone) {
-                            return null;
+            const indent = Util.indentation(line);
+            for (line[indent..]) |c| {
+                if (c == seq.char) {} else {
+                    if (Util.isHorizontalSpace(c)) {
+                        if (!space_zone) {
+                            space_zone = true;
                         }
-                        if (active_char) |char| {
-                            if (char != c) {
-                                return null;
-                            }
-                            continue;
-                        }
-                        active_char = c;
-                    },
-                    else => {
+                    } else {
                         if (Util.isHorizontalSpace(c)) {
                             if (!space_zone) {
                                 space_zone = true;
@@ -243,19 +238,27 @@ const Lexer = struct {
                         } else {
                             return null;
                         }
-                    },
+                    }
                 }
             }
-            return line_pos.end;
+            return pos.?.end;
         }
         return null;
     }
 
-    fn findSetextSequence(in: []const u8) ?usize {
+    const Seq = struct {
+        char: u8,
+        idx: usize,
+    };
+
+    fn findSetextSequence(in: []const u8) ?Seq {
         if (Util.index(in, "=")) |idx| {
-            return idx;
+            return Seq{ .char = '=', .idx = idx };
         }
-        return Util.index(in, "-");
+        if (Util.index(in, "-")) |idx| {
+            return Seq{ .char = '-', .idx = idx };
+        }
+        return null;
     }
 
     // returns position for Thematic breaks
@@ -810,7 +813,11 @@ test "Lexer.findSetextHeading" {
         const expect = expectation[i];
         const case = cases[i];
         const idx = Lexer.findSetextHeading(case.markdown);
-        warn("{}: idx={} {}\n", case.example, idx, case.markdown);
+        warn(
+            "{}: idx={} \n",
+            case.example,
+            idx,
+        );
         break;
     }
 }
