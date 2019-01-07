@@ -747,139 +747,61 @@ test "Lexer" {
     try lx.run();
 }
 
+fn one(v: ?usize) []const ?usize {
+    const s = []?usize{v};
+    return s[0..];
+}
+
+fn two(a: ?usize, b: ?usize) []const ?usize {
+    const v = []?usize{ a, b };
+    return v[0..];
+}
+
+fn three(a: ?usize, b: ?usize, c: ?usize) []const ?usize {
+    const v = []?usize{ a, b, c };
+    return v[0..];
+}
+
 test "Lexer.findSetextHeading" {
-    const TestCase = struct {
-        const Self = @This();
-        in: []const u8,
-        offset: ?usize,
-        fn init(in: []const u8, offset: ?usize) Self {
-            return Self{ .in = in, .offset = offset };
-        }
+    const cases = suite.all_cases[50..75];
+    const expectation = [][]const ?usize{
+        two(null, null), //50
+        one(null), //51
+        two(null, null), //52
+        three(null, null, null), //53
+        one(null), //54
+        one(null), //55
+        one(null), //56
+        one(null), //57
+        one(null), //58
+        one(null), //59
+        two(null, null), //60
+        one(null), //61
+        one(null), //62
+        one(null), //63
+        one(null), //64
+        two(null, null), //65
+        one(null), //66
+        one(null), //67
+        one(null), //68
+        one(null), //69
+        one(null), //70
+        one(null), //72
+        one(null), //73
+        one(null), //74
+        one(null), //75
     };
-    const new_case = TestCase.init;
-
-    const cases = []TestCase{
-        new_case(
-            \\Foo *bar*
-            \\=========
-        , 19),
-        // The content of the header may span more than one line
-        new_case(
-            \\Foo *bar
-            \\baz*
-            \\====
-        , 18),
-        new_case(
-            \\Foo *bar
-            \\baz*
-            \\====
-        , 18),
-        // The underlining can be any length:
-        new_case(
-            \\Foo
-            \\-------------------------
-        , 29),
-        new_case(
-            \\Foo
-            \\=
-        , 5),
-        // The heading content can be indented up to three spaces, and need not
-        // line up with the underlining.
-        new_case(
-            \\   Foo
-            \\---
-        , 10),
-        new_case(
-            \\  Foo
-            \\-----
-        , 11),
-        new_case(
-            \\  Foo
-            \\  ===
-        , 11),
-        // Four spaces indent is too much.
-        new_case(
-            \\    Foo
-            \\    ---
-        , null),
-        new_case(
-            \\    Foo
-            \\---
-        , null),
-        // The setext heading underline can be indented up to three spaces, and
-        // may have trailing spaces.
-        new_case(
-            \\Foo
-            \\   ----      
-        , 17),
-    };
-
-    for (cases) |case| {
-        const idx = Lexer.findSetextHeading(case.in);
-        // if (idx != null) {
-        //     warn("{} {} {}\n", case.in[0..idx.?], idx, case.in.len);
-        // }
-        if (case.offset) |offset| {
-            if (idx == null) {
-                warn("expected offset {} got null\n", offset);
-                return error.TestFailed;
-            }
-            if (offset != idx.?) {
-                warn("expected offset {} got {}\n", offset, idx);
-                return error.TestFailed;
-            }
-        } else {
-            if (idx != null) {
-                warn("expected offset to be null got {}\n", idx);
-                return error.TestFailed;
-            }
-        }
+    var i: usize = 0;
+    while (i < expectation.len) : (i += 1) {
+        const expect = expectation[i];
+        const case = cases[i];
+        const idx = Lexer.findSetextHeading(case.markdown);
+        warn("{}: idx={} {}\n", case.example, idx, case.markdown);
+        break;
     }
 }
 
-test "IterLine" {
-    const TestCase = struct {
-        const Self = @This();
-        in: []const u8,
-        start_pos: usize,
-        limit: ?usize,
-        begin: usize,
-        end: usize,
-        fn init(in: []const u8, start_pos: usize, limit: ?usize, begin: usize, end: usize) Self {
-            return Self{
-                .in = in,
-                .start_pos = start_pos,
-                .limit = limit,
-                .begin = begin,
-                .end = end,
-            };
-        }
-    };
-    const new_case = TestCase.init;
-    const cases = []TestCase{
-        // plain line
-        new_case("abc", 0, null, 0, 3),
-        // ,ust include the new line character
-        new_case("abc\ndef", 0, null, 0, 4),
-        new_case("abc\ndef", 5, 6, 5, 7),
-    };
-    for (cases) |case| {
-        var iter = &Lexer.IterLine.init(case.in, case.start_pos, case.limit);
-        if (iter.next()) |pos| {
-            const expect_pos = Position{ .begin = case.begin, .end = case.end };
-            if (pos.begin != expect_pos.begin or pos.end != expect_pos.end) {
-                warn("case : {} expected position {} got {}\n", case, expect_pos, pos);
-                return error.WrongPosition;
-            }
-        } else {
-            if (!(case.begin == 0 and case.end == 0)) {
-                const pos = Position{ .begin = case.begin, .end = case.end };
-                warn("case: {} expcedted position:{} got null\n", case, pos);
-                return error.PositionMustNotBeNull;
-            }
-        }
-    }
-}
+test "Lexer.findFencedCodeBlock" {}
 
 const Parser = struct {
     const Node = struct {
