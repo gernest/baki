@@ -758,6 +758,7 @@ const Util = struct {
 };
 
 const suite = @import("test_suite.zig");
+const TestCase = suite.TestCase;
 test "Lexer" {
     var lx = &Lexer.init(std.debug.global_allocator);
     defer lx.deinit();
@@ -766,18 +767,18 @@ test "Lexer" {
 
 test "Lexer.findSetextHeading" {
     const Helper = struct {
-        fn testTwo(case: *const suite.TestCase, expect: [2]?usize) void {
+        fn testTwo(case: *const TestCase, expect: [2]?usize) void {
             testfindSetextHeading(case, expect[0..]);
         }
 
-        fn testOne(case: *const suite.TestCase, expect: [1]?usize) void {
+        fn testOne(case: *const TestCase, expect: [1]?usize) void {
             testfindSetextHeading(case, expect[0..]);
         }
 
-        fn testThree(case: *const suite.TestCase, expect: [3]?usize) void {
+        fn testThree(case: *const TestCase, expect: [3]?usize) void {
             testfindSetextHeading(case, expect[0..]);
         }
-        fn testfindSetextHeading(case: *const suite.TestCase, expect: []const ?usize) void {
+        fn testfindSetextHeading(case: *const TestCase, expect: []const ?usize) void {
             const size = case.markdown.len;
             var current_pos: usize = 0;
             var j: usize = 0;
