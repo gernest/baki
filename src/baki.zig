@@ -141,7 +141,7 @@ const Lexer = struct {
             self.current_pos = self.src.len;
             return Position{
                 .begin = c,
-                .end = self.current_pos - 1,
+                .end = self.current_pos,
             };
         }
 
@@ -764,62 +764,61 @@ test "Lexer" {
     try lx.run();
 }
 
-fn one(v: ?usize) []const ?usize {
-    const s = []?usize{v};
-    return s[0..];
-}
-
-fn two(a: ?usize, b: ?usize) []const ?usize {
-    const v = []?usize{ a, b };
-    return v[0..];
-}
-
-fn three(a: ?usize, b: ?usize, c: ?usize) []const ?usize {
-    const v = []?usize{ a, b, c };
-    return v[0..];
-}
-
 test "Lexer.findSetextHeading" {
-    const cases = suite.all_cases[50..75];
-    const expectation = [][]const ?usize{
-        two(null, null), //50
-        one(null), //51
-        two(null, null), //52
-        three(null, null, null), //53
-        one(null), //54
-        one(null), //55
-        one(null), //56
-        one(null), //57
-        one(null), //58
-        one(null), //59
-        two(null, null), //60
-        one(null), //61
-        one(null), //62
-        one(null), //63
-        one(null), //64
-        two(null, null), //65
-        one(null), //66
-        one(null), //67
-        one(null), //68
-        one(null), //69
-        one(null), //70
-        one(null), //72
-        one(null), //73
-        one(null), //74
-        one(null), //75
+    const Helper = struct {
+        fn testTwo(case: *const suite.TestCase, expect: [2]?usize) void {
+            testfindSetextHeading(case, expect[0..]);
+        }
+
+        fn testOne(case: *const suite.TestCase, expect: [1]?usize) void {
+            testfindSetextHeading(case, expect[0..]);
+        }
+
+        fn testThree(case: *const suite.TestCase, expect: [3]?usize) void {
+            testfindSetextHeading(case, expect[0..]);
+        }
+        fn testfindSetextHeading(case: *const suite.TestCase, expect: []const ?usize) void {
+            const size = case.markdown.len;
+            var current_pos: usize = 0;
+            var j: usize = 0;
+            for (expect) |value, ix| {
+                if (current_pos < case.markdown.len) {
+                    if (Lexer.findSetextHeading(case.markdown[current_pos..])) |idx| {
+                        current_pos += idx;
+                        if (value) |expect_value| {
+                            if (current_pos != expect_value) {
+                                warn(
+                                    "error: {} expected offset={} got offset={}\n",
+                                    case.example,
+                                    expect_value,
+                                    current_pos,
+                                );
+                            }
+                        } else {
+                            warn(
+                                "error: {} expected offset=null got offset={}\n",
+                                case.example,
+                                current_pos,
+                            );
+                        }
+                    } else {
+                        if (value != null) {
+                            warn(
+                                "error: {} expected offset={} got offset=null\n",
+                                case.example,
+                                value,
+                            );
+                        }
+                    }
+                }
+            }
+        }
     };
-    var i: usize = 0;
-    while (i < expectation.len) : (i += 1) {
-        const expect = expectation[i];
-        const case = cases[i];
-        const idx = Lexer.findSetextHeading(case.markdown);
-        warn(
-            "{}: idx={} \n",
-            case.example,
-            idx,
-        );
-        break;
-    }
+    const one = Helper.testOne;
+    const two = Helper.testTwo;
+    const three = Helper.testThree;
+    const cases = suite.all_cases[49..75];
+    two(&cases[0], []?usize{ 19, 40 });
 }
 
 test "Lexer.findFencedCodeBlock" {}
