@@ -783,7 +783,7 @@ test "Lexer.findSetextHeading" {
             var current_pos: usize = 0;
             var j: usize = 0;
             for (expect) |value, ix| {
-                if (current_pos < case.markdown.len) {
+                if (current_pos < size) {
                     if (Lexer.findSetextHeading(case.markdown[current_pos..])) |idx| {
                         current_pos += idx;
                         if (value) |expect_value| {
